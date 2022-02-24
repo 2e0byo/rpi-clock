@@ -1,3 +1,5 @@
+from .hardware import Lamp, PWM, LightSensor, Button, Pin
+
 BACKLIGHT_PIN = 6
 VOLUME_PIN = 26
 MUTE_PIN = 14
@@ -18,7 +20,6 @@ up_button = Button(UP_BUTTON)
 down_button = Button(DOWN_BUTTON)
 enter_button = Button(ENTER_BUTTON)
 
-backlight.duty = 50
-
-
 light_sensor = LightSensor()
+
+backlight.percent_duty = 1
