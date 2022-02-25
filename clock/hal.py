@@ -12,6 +12,7 @@ lamp = Lamp()
 
 
 backlight = PWM(BACKLIGHT_PIN)
+lcd = Lcd(backlight=backlight)
 
 volume = PWM(VOLUME_PIN)
 mute = Pin(MUTE_PIN, Pin.OUT, True)
