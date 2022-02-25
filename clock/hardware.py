@@ -28,7 +28,12 @@ class Fadeable:
 
     @percent_duty.setter
     def percent_duty(self, val):
-        self.duty = round(val * self.max_duty)
+        if val < 0:
+            self.duty = 0
+        elif val > 1:
+            self.max_duty
+        else:
+            self.duty = round(val * self.max_duty)
 
 
 class PWM(Fadeable):
