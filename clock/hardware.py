@@ -168,11 +168,18 @@ class Button:
         pi.set_pull_up_down(pin, pigpio.PUD_DOWN if inverted else pigpio.PUD_UP)
         pi.set_glitch_filter(pin, self.GLITCH_FILTER_DURATION)
         pi.callback(
-            pin, pigpio.RISING_EDGE if inverted else pigpio.FALLING_EDGE, self.callback
+            pin, pigpio.RISING_EDGE if inverted else pigpio.FALLING_EDGE, self._callback
         )
+
+    def _callback(self, *args):
+        x = self.callback(*args)
+        if asyncio.iscoroutine(x):
+            asyncio.create_task(x)
 
     def callback(self, *args):
         print(self.pin, "pressed!")
+
+
 class Lcd:
     BACKSPACE = "\b"
     CLEAR = "\f"
