@@ -1,7 +1,7 @@
 import asyncio
 from time import sleep
-import pigpio
 
+import pigpio
 from smbus import SMBus
 
 pi = pigpio.pi()
