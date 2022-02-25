@@ -102,7 +102,10 @@ class Lamp(Fadeable):
         resp = pi.bb_spi_xfer(self.cs, [0] * 2)[1]
 
     def __del__(self):
-        pi.bb_spi_close(self.cs)
+        try:
+            pi.bb_spi_close(self.cs)
+        except Exception:
+            pass
 
 
 class LightSensor:
