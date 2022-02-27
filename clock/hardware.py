@@ -168,7 +168,7 @@ class Pin:
 
 
 class Button:
-    GLITCH_FILTER_DURATION = 100
+    GLITCH_FILTER_DURATION = 50
 
     def __init__(self, pin: int, inverted: bool = False):
         self.pin = pin
