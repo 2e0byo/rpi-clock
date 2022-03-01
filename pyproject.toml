@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "rpi-clock"
+version = "0.1.0"
+description = ""
+authors = ["John Maximilian <2e0byo@gmail.com>"]
+license = "MIT"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+apigpio-mpf = "^0.0.4"
+
+[tool.poetry.dev-dependencies]
+pytest-sugar = "^0.9.4"
+pytest-asyncio = "^0.18.1"
+pytest-mock = "^3.7.0"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
