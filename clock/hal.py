@@ -16,6 +16,7 @@ lcd = Lcd(backlight=backlight)
 
 volume = PWM(VOLUME_PIN)
 mute = Pin(MUTE_PIN, Pin.OUT, True)
+mute(True)
 
 up_button = Button(UP_BUTTON)
 down_button = Button(DOWN_BUTTON)
