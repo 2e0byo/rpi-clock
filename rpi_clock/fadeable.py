@@ -8,27 +8,32 @@ class Fadeable:
     """Base Class for a fadeable output."""
 
     def __init__(self, *args, **kwargs):
-        self.duty = 0
         self.fade_delay = 0.01
 
-    async def fade(self, val: int, duration: int = 0):
-        current = self.duty
+    async def fade(self, val: int, duration: int = None):
+        current = await self.duty()
         step = 1 if current < val else -1
         delay = duration / abs(current - val) if duration else self.fade_delay
         for br in range(current, val + step, step):
-            self.duty = br
+            self.duty(br)
             await asyncio.sleep(delay)
+
+    async def fade_percent(self, val: int, duration: int = None):
+        val = self._convert_duty(val)
+        await self.fade(val, duration)
+
+    def _convert_duty(self, val: int):
+        if val < 0:
+            return 0
+        elif val > 1:
+            return self.max_duty
+        else:
+            return round(val * self.max_duty)
 
     async def percent_duty(self, val: int = None):
         if val is None:
             return await self.duty() / self.max_duty
-
-        if val < 0:
-            await self.duty(0)
-        elif val > 1:
-            await self.duty(self.max_duty)
-        else:
-            await self.duty(round(val * self.max_duty))
+        await self.duty(self._convert_duty(val))
 
 
 class PWM(Fadeable):
