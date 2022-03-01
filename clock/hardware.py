@@ -1,5 +1,7 @@
 import asyncio
-from time import sleep
+from collections import deque
+from functools import partial
+from time import monotonic, sleep
 
 import pigpio
 from smbus import SMBus
@@ -167,25 +169,165 @@ class Pin:
         self.__call__(0)
 
 
-class Button:
-    GLITCH_FILTER_DURATION = 50
+class Timer:
+    """Asyncio timer, api based loosely on Peter Hinch's timer."""
 
-    def __init__(self, pin: int, inverted: bool = False):
-        self.pin = pin
-        pi.set_mode(pin, pigpio.INPUT)
-        pi.set_pull_up_down(pin, pigpio.PUD_DOWN if inverted else pigpio.PUD_UP)
-        pi.set_glitch_filter(pin, self.GLITCH_FILTER_DURATION)
-        pi.callback(
-            pin, pigpio.RISING_EDGE if inverted else pigpio.FALLING_EDGE, self._callback
+    def __init__(self):
+        self.task = None
+        self.loop = asyncio.get_event_loop()
+
+    def trigger(self, duration_ms: int, fn: callable):
+        self.fn = fn
+        self.cancel()
+        self.task = asyncio.run_coroutine_threadsafe(
+            self._trigger(duration_ms), self.loop
         )
 
-    def _callback(self, *args):
-        x = self.callback(*args)
-        if asyncio.iscoroutine(x):
-            asyncio.create_task(x)
+    def cancel(self):
+        try:
+            self.task.cancel()
+        except Exception:
+            pass
 
-    def callback(self, *args):
-        print(self.pin, "pressed!")
+    async def _call(self):
+        print("calling", self.fn)
+        x = self.fn()
+        print("got", x)
+        if asyncio.iscoroutine(x):
+            print("awaiting")
+            await x
+            print("done")
+
+    async def _trigger(self, duration_ms):
+        print("sleeping")
+        await asyncio.sleep(duration_ms / 1_000)
+        print("running")
+        await self._call()
+
+
+class Button:
+    """A button, api loosely inspired by Peter Hinch's micropython `Pushbutton`."""
+
+    GLITCH_FILTER_DURATION = 50
+    HOOKS = {"press", "release", "long", "double"}
+    FALLING_EDGE = 0
+    RISING_EDGE = 1
+    WDT = 2
+
+    def __init__(
+        self,
+        pin: int,
+        inverted: bool = False,
+        debounce_ms: int = 100,
+        long_ms: int = 1_000,
+        double_click_ms: int = 400,
+        suppress: bool = False,
+    ):
+        pi.set_mode(pin, pigpio.INPUT)
+        pi.set_pull_up_down(pin, pigpio.PUD_DOWN if inverted else pigpio.PUD_UP)
+        pi.set_glitch_filter(pin, debounce_ms)
+        pi.callback(pin, pigpio.EITHER_EDGE, self._callback)
+        self.pin = pin
+        self.in_progress = False
+        self.hooks = {k: None for k in self.HOOKS}
+        self.blocked = False
+        self.double_click_ms = double_click_ms
+        self.long_ms = long_ms
+        self.suppress = suppress
+        self._last = deque([], 2)
+        self.state = False
+        self._double_click_timer = Timer()
+        self._long_timer = Timer()
+        self.loop = asyncio.get_event_loop()
+
+    async def _wrapper(self, future):
+        await future
+        print("unblocked")
+        self.blocked = False
+
+    def _call(self, fn: callable, *args):
+        """Call or run a fn or coro."""
+        print("blocked")
+        self.blocked = True
+        x = fn(*args)
+        if asyncio.iscoroutine(x):
+            asyncio.run_coroutine_threadsafe(self._wrapper(x), self.loop)
+        else:
+            print("unblocked")
+            self.blocked = False
+
+    def _callback(self, gpio: int, level: int, tick: int):
+        print(gpio, "rising" if level == self.RISING_EDGE else "falling")
+        if self.blocked:
+            return
+
+        fn = {
+            self.RISING_EDGE: self.hooks["release"],
+            self.FALLING_EDGE: self._push,
+            self.WDT: self._timeout,
+        }[level]
+        if fn:
+            fn()
+
+    def _timeout(self):
+        if self.state and self.hooks["long"]:
+            self._call(self.hooks["long"])
+
+    def _release_if_not_doubled(self):
+        if self.hooks["double"] and (
+            now - self._last[-1] > self.double_click_ms / 1_000
+        ):
+            self._call(self.hooks["release"])
+
+    def _release(self):
+        self.state = False
+        now = monotonic()
+        if suppress:
+            if self.hooks["double"] and (
+                now - self._last[-1] < self.double_click_ms / 1_000
+            ):
+                # double press has been called
+                return
+            if self.hooks["double"]:
+                # trigger when timer elapses if we haven't double pressed in that time.
+                self._double_click_timer.trigger(
+                    self.double_click_ms, self._release_if_not_doubled
+                )
+                return
+            if self.hooks["long"] and diff > self.long_ms:
+                # long has been called
+                return
+
+        if self.hooks["release"]:
+            self._call(self.hooks["release"])
+
+    def _long(self):
+        if self.state and self.hooks["long"]:
+            self._call(self.hooks["long"])
+
+    def _push(self):
+        self.state = True
+        now = monotonic()
+        if self.hooks["press"]:
+            self._call(self.hooks["press"])
+        if (
+            self.hooks["double"]
+            and self._last
+            and (now - self._last <= self.double_click_ms / 1_000)
+        ):
+            self._call(self.hooks["double"])
+        if self.hooks["long"]:
+            self._long_timer.trigger(self.long_ms, self._long)
+        self._last.append(now)
+
+    def __setitem__(self, key: str, val: callable = None):
+        """Set a function to run."""
+        if key not in self.HOOKS:
+            raise Exception(f"Function {key} is not a valid hook")
+        self.hooks[key] = val
+
+    def __getitem__(self, key: str):
+        return self.hooks[key]
 
 
 class Lcd:
