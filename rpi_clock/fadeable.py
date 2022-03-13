@@ -1,28 +1,64 @@
 import asyncio
+import logging
+from abc import ABC, abstractmethod
+from time import monotonic, sleep
 from typing import Optional
 
-import apigpio
+import pigpio
 
 
-class Fadeable:
+class Fadeable(ABC):
     """Base Class for a fadeable output."""
 
+    instances = []
+    MAX_FADE_FREQ_HZ = 50  # no point updating faster than this.
+
     def __init__(self, *args, **kwargs):
-        self.fade_delay = 0.01
+        name = kwargs.get("name", f"{__name__}-{len(self.instances)}")
+        self.instances.append(name)
+        self._logger = logging.getLogger(name)
+        self.duty = 0
 
-    async def fade(self, val: int, duration: int = None):
-        current = await self.duty()
-        step = 1 if current < val else -1
-        delay = duration / abs(current - val) if duration else self.fade_delay
-        for br in range(current, val + step, step):
-            self.duty(br)
-            await asyncio.sleep(delay)
+    async def fade(
+        self,
+        duty: int = None,
+        percent_duty: float = None,
+        duration: int = 1,
+    ):
+        if duty is None and percent_duty is None:
+            raise ValueError("One of duty or percent_duty needs to be supplied!")
 
-    async def fade_percent(self, val: int, duration: int = None):
-        val = self._convert_duty(val)
-        await self.fade(val, duration)
+        duty = duty or self._convert_duty(percent_duty)
+        current = self.duty
+        step = 1 if current < duty else -1
+        steps = abs(current - duty)
+        freq = steps / duration
+        while freq > self.MAX_FADE_FREQ_HZ:
+            steps //= 2
+            step *= 2
+            freq = steps / duration
 
-    def _convert_duty(self, val: int):
+        delay = 1 / freq
+
+        for br in range(current, duty + step, step):
+            start = monotonic()
+            br = max(br, 0)
+            br = min(br, self.max_duty)
+            self.duty = br
+            elapsed = monotonic() - start
+            await asyncio.sleep(max(0, delay - elapsed))
+        self.duty = duty
+
+    @property
+    def percent_duty(self) -> float:
+        return self.duty / self.max_duty
+
+    @percent_duty.setter
+    def percent_duty(self, val: float):
+        val = self._convert_duty
+        self.duty = val
+
+    def _convert_duty(self, val: float) -> int:
         if val < 0:
             return 0
         elif val > 1:
@@ -30,10 +66,10 @@ class Fadeable:
         else:
             return round(val * self.max_duty)
 
-    async def percent_duty(self, val: int = None):
-        if val is None:
-            return await self.duty() / self.max_duty
-        await self.duty(self._convert_duty(val))
+    @property
+    @abstractmethod
+    def duty(self):
+        pass
 
 
 class PWM(Fadeable):
@@ -48,23 +84,30 @@ class PWM(Fadeable):
         self.pin = pin
         self.max_duty = max_duty or self.MAX_DUTY
         self.pi = pi
-        asyncio.create_task(self._start())
+        pi.set_mode(self.pin, 1)
+        pi.set_PWM_frequency(self.pin, freq or self.FREQ)
+        pi.set_PWM_range(self.pin, self.max_duty)
         super().__init__(*args, **kwargs)
+        self._logger.debug(f"Started pwm on pin {self.pin}.")
 
-    async def _start(self):
-        await self.pi.set_mode(self.pin, 1)
-        await self.pi.set_PWM_frequency(self.pin, freq or self.FREQ)
-        await self.pi.set_PWM_range(self.pin, self.max_duty)
+    @property
+    def duty(self):
+        return self.pi.get_PWM_dutycycle(self.pin)
 
-    async def duty(self, val: int = None) -> int:
-        if val is None:
-            return await self.pi.get_PWM_dutycycle(self.pin)
+    @duty.setter
+    def duty(self, val: int):
+        self.pi.set_PWM_dutycycle(self.pin, val)
 
-        await self.pi.set_PWM_dutycycle(self.pin, val)
+
+class SpiError(Exception):
+    """An error with spi communication."""
 
 
 class Lamp(Fadeable):
     """An SPI controlled lamp."""
+
+    SETTLE_TIME_S = 0.001
+    SPI_ATTEMPTS = 10
 
     def __init__(
         self,
@@ -86,31 +129,38 @@ class Lamp(Fadeable):
         self.mode = mode
         self.max_duty = 1023
         self.pi = pi
-        asyncio.create_task(self._start())
+        pi.bb_spi_open(cs, miso, mosi, sclk, baud, mode)
         super().__init__(*args, **kwargs)
-
-    async def _start(self):
-        await self.pi.bb_spi_open(
-            self.cs, self.miso, self.mosi, self.sclk, self.baud, self.mode
-        )
 
     @staticmethod
     def _convert(b: bytes):
         return int.from_bytes(b, "little")
 
-    async def duty(self, val: int = None) -> Optional[int]:
-        if val is None:
-            await self.pi.bb_spi_xfer(self.cs, b"r")
-            await asyncio.sleep(0.001)
-            return convert(await self.pi.bb_spi_xfer(self.cs, [0] * 2)[1])
+    @property
+    def duty(self):
+        self.pi.bb_spi_xfer(self.cs, b"r")
+        sleep(self.SETTLE_TIME_S)
+        return self._convert(self.pi.bb_spi_xfer(self.cs, [0] * 2)[1])
 
-        val = int(val).to_bytes(2, "little")
-        for _ in range(self.ATTEMPTS):
-            await self.pi.bb_spi_xfer(self.cs, b"s" + val)
-            await asyncio.sleep(0.001)
-            resp = self._convert(await self.pi.bb_spi_xfer(self.cs, [0] * 2)[1])
+    @duty.setter
+    def duty(self, val: int):
+        duty = int(val).to_bytes(2, "little")
+        for attempt in range(self.SPI_ATTEMPTS):
+            self.pi.bb_spi_xfer(self.cs, b"s" + duty)
+            sleep(self.SETTLE_TIME_S)
+            resp = self._convert(self.pi.bb_spi_xfer(self.cs, [0] * 2)[1])
             if resp == val:
+                if attempt > 1:
+                    self._logger.debug(
+                        f"Set lamp to {val} after {attempt + 1} attempts."
+                    )
                 return
+            sleep(2 * self.SETTLE_TIME_S)
+
+        raise SpiError(f"Failed to set lamp to {val} after {attempt + 1} attempts.")
 
     def __del__(self):
-        asyncio.create_task(self.pi.bb_spi_close(self.cs))
+        try:
+            self.pi.bb_spi_close(self.cs)
+        except Exception:
+            pass

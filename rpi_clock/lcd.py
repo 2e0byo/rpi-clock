@@ -12,6 +12,8 @@ class Lcd:
     GOTO = "\x1b[Lx{:03}y{:03};"
     RESTART = "\x1b[LI"
     NEWCHAR = "\x1b[LG{}{:016};"
+    CURSOR = "\x1b[LC"
+    NOCURSOR = "\x1b[Lc"
 
     def __init__(
         self,
@@ -28,9 +30,13 @@ class Lcd:
         self._specials = {}
         self._trans = str.maketrans({})
         self.restart()
+        self.cursor(False)
 
     def restart(self):
         self.write(self.RESTART)
+
+    def cursor(self, val: bool):
+        self.write(self.CURSOR if val else self.NOCURSOR)
 
     def goto(self, x: int, y: int):
         self.write(self.GOTO.format(x, y))
