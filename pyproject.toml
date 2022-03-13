@@ -7,7 +7,7 @@ license = "MIT"
 
 [tool.poetry.dependencies]
 python = "^3.9"
-apigpio-mpf = "^0.0.4"
+pigpio = "^1.78"
 
 [tool.poetry.dev-dependencies]
 pytest-sugar = "^0.9.4"
