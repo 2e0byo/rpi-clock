@@ -340,6 +340,8 @@ class Lcd:
     GOTO = "\x1b[Lx{:03}y{:03};"
     RESTART = "\x1b[LI"
     NEWCHAR = "\x1b[LG{}{:016};"
+    CURSOR = "\x1b[LC"
+    NOCURSOR = "\x1b[Lc"
 
     def __init__(
         self,
@@ -353,9 +355,10 @@ class Lcd:
         self.cols = cols
         self.backlight = backlight
         self._buffer = [""] * lines
-        self.write(self.RESTART)
         self._specials = {}
         self._trans = str.maketrans({})
+        self.write(self.RESTART)
+        self.write(self.NOCURSOR)
 
     def goto(self, x: int, y: int):
         self.write(self.GOTO.format(x, y))
