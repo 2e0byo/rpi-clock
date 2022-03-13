@@ -43,7 +43,7 @@ async def end_alarm():
 
 FADE_DURATION = 300
 # FADE_DURATION = 10
-MAX_VOLUME = 12
+MAX_VOLUME = 11
 
 
 async def alarm(when: datetime.time):
