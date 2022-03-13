@@ -60,7 +60,10 @@ async def alarm(when: datetime.time):
         old = enter_button["press"]
         enter_button["press"] = end_alarm
         print("ring ring")
+        lcd[1] = "ring ring"
         await play()
         mute(False)
-        tasks.append(asyncio.create_task(lamp.fade(500, FADE_DURATION)))
-        tasks.append(asyncio.create_task(volume.fade(MAX_VOLUME, FADE_DURATION)))
+        x = lamp.fade(500, FADE_DURATION)
+        tasks.append(x)
+        await x
+        tasks.append(asyncio.create_task(volume.fade(MAX_VOLUME, 30)))
