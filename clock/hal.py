@@ -1,4 +1,4 @@
-from .hardware import Lamp, PWM, LightSensor, Button, Pin, Lcd
+from .hardware import PWM, Button, Lamp, Lcd, LightSensor, Pin
 
 BACKLIGHT_PIN = 6
 VOLUME_PIN = 26
