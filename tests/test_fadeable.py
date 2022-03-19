@@ -44,6 +44,7 @@ def mock_fadeable(mocker, start):
         [0, 50],
         [10, 20],
         [20, 10],
+        [50, 50],
     ],
 )
 async def test_fade(mocker, start, end):

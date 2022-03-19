@@ -48,6 +48,8 @@ class Fadeable(ABC):
 
         duty = duty if duty is not None else self._convert_duty(percent_duty)
         current = self.duty
+        if duty == current:
+            return
         step = 1 if current < duty else -1
         steps = abs(current - duty)
         freq = steps / duration
