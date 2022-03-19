@@ -79,3 +79,27 @@ async def test_cancel_fade(mocker):
     f.cancel_fade()
     await asyncio.sleep(0.1)
     assert task.cancelled()
+
+
+@pytest.mark.parametrize(
+    "real, percent",
+    [
+        [0, 0],
+        [50, 1],
+        [25, 0.5],
+    ],
+)
+def test_percent_duty(mocker, real, percent):
+    f, _ = mock_fadeable(mocker, real)
+    assert f.percent_duty == percent
+    f, mock_duty = mock_fadeable(mocker, 0)
+    f.percent_duty = percent
+    mock_duty.assert_called_with(real)
+
+
+def test_percent_duty_bounding(mocker):
+    f, mock_duty = mock_fadeable(mocker, 0)
+    f.percent_duty = -1
+    mock_duty.assert_called_with(0)
+    f.percent_duty = 2
+    mock_duty.assert_called_with(50)

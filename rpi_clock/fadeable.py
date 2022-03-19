@@ -73,7 +73,7 @@ class Fadeable(ABC):
 
     @percent_duty.setter
     def percent_duty(self, val: float):
-        val = self._convert_duty
+        val = self._convert_duty(val)
         self.duty = val
 
     def _convert_duty(self, val: float) -> int:
