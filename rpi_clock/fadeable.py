@@ -18,6 +18,7 @@ class Fadeable(ABC):
         self.instances.append(name)
         self._logger = logging.getLogger(name)
         self.duty = 0
+        self._fade_task = None
 
     async def fade(
         self,
@@ -25,6 +26,21 @@ class Fadeable(ABC):
         percent_duty: float = None,
         duration: int = 1,
     ):
+        self.fade_task = self._fade(duty, percent_duty, duration)
+        await self._fade_task
+        self.afde_task = None
+
+    def cancel_fade(self):
+        if self._fade_task:
+            self._fade_task.cancel()
+
+    async def _fade(
+        self,
+        duty: int = None,
+        percent_duty: float = None,
+        duration: int = 1,
+    ):
+
         if duty is None and percent_duty is None:
             raise ValueError("One of duty or percent_duty needs to be supplied!")
 
