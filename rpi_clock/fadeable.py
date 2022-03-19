@@ -46,7 +46,7 @@ class Fadeable(ABC):
         if duty is None and percent_duty is None:
             raise ValueError("One of duty or percent_duty needs to be supplied!")
 
-        duty = duty or self._convert_duty(percent_duty)
+        duty = duty if duty is not None else self._convert_duty(percent_duty)
         current = self.duty
         step = 1 if current < duty else -1
         steps = abs(current - duty)
