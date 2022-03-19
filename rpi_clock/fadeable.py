@@ -27,9 +27,9 @@ class Fadeable(ABC):
         duration: int = 1,
     ):
         self.cancel_fade()
-        self.fade_task = self._fade(duty, percent_duty, duration)
+        self._fade_task = self._fade(duty, percent_duty, duration)
         await self._fade_task
-        self.afde_task = None
+        self._fade_task = None
 
     def cancel_fade(self):
         if self._fade_task:
