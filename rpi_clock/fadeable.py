@@ -87,7 +87,7 @@ class Fadeable(ABC):
     @property
     @abstractmethod
     def duty(self):
-        pass
+        pass  # pragma: no cover
 
 
 class PWM(Fadeable):
