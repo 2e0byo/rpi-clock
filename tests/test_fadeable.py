@@ -27,6 +27,16 @@ def mock_duty(x=None, val=[0]):
         return val[0]
 
 
+def mock_fadeable(mocker, start):
+    f = concreter(Fadeable)
+    duty_mock = mocker.PropertyMock(return_value=start)
+    f.duty = duty_mock
+    f.max_duty = 50
+    f.MAX_FADE_FREQ_HZ = 1_000_000  # prevent it from getting in the way
+    f = f()
+    return f, duty_mock
+
+
 @pytest.mark.parametrize(
     "start, end",
     [
@@ -37,12 +47,7 @@ def mock_duty(x=None, val=[0]):
     ],
 )
 async def test_fade(mocker, start, end):
-    f = concreter(Fadeable)
-    duty_mock = mocker.PropertyMock(return_value=start)
-    f.duty = duty_mock
-    f.max_duty = 50
-    f.MAX_FADE_FREQ_HZ = 1_000_000  # prevent it from getting in the way
-    f = f()
+    f, duty_mock = mock_fadeable(mocker, start)
     await f.fade(duty=end, duration=0.01)
     step = -1 if end < start else 1
     duty_mock.assert_has_calls([mocker.call(x) for x in range(start, step, end + step)])
@@ -58,12 +63,7 @@ async def test_fade(mocker, start, end):
     ],
 )
 async def test_percent_fade(mocker, start, end):
-    f = concreter(Fadeable)
-    duty_mock = mocker.PropertyMock(return_value=round(50 * start))
-    f.duty = duty_mock
-    f.max_duty = 50
-    f.MAX_FADE_FREQ_HZ = 1_000_000  # prevent it from getting in the way
-    f = f()
+    f, duty_mock = mock_fadeable(mocker, round(50 * start))
     await f.fade(percent_duty=end, duration=0.01)
     step = -1 if end < start else 1
     duty_mock.assert_called_with(round(end * 50))
@@ -71,11 +71,7 @@ async def test_percent_fade(mocker, start, end):
 
 
 async def test_cancel_fade(mocker):
-    f = concreter(Fadeable)
-    duty_mock = mocker.PropertyMock(return_value=0)
-    f.duty = duty_mock
-    f.max_duty = 50
-    f = f()
+    f, duty_mock = mock_fadeable(mocker, 0)
     asyncio.create_task(f.fade(percent_duty=1, duration=1))
     await asyncio.sleep(0.1)
     task = f._fade_task
