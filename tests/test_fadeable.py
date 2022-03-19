@@ -53,6 +53,13 @@ async def test_fade(mocker, start, end):
     duty_mock.assert_has_calls([mocker.call(x) for x in range(start, step, end + step)])
 
 
+async def test_fade_freq(mocker):
+    f, duty_mock = mock_fadeable(mocker, 0)
+    f.MAX_FADE_FREQ_HZ = 90
+    await f.fade(duty=50, duration=0.1)
+    assert duty_mock.call_count < 50
+
+
 @pytest.mark.parametrize(
     "start, end",
     [
