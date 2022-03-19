@@ -22,7 +22,7 @@ class Fadeable(ABC):
 
     async def fade(
         self,
-            **, 
+        *,
         duty: int = None,
         percent_duty: float = None,
         duration: int = 1,
