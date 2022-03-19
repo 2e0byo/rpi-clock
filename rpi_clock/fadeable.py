@@ -11,7 +11,7 @@ class Fadeable(ABC):
     """Base Class for a fadeable output."""
 
     instances = []
-    MAX_FADE_FREQ_HZ = 50  # no point updating faster than this.
+    MAX_FADE_FREQ_HZ = 90  # no point updating faster than this.
 
     def __init__(self, *args, **kwargs):
         name = kwargs.get("name", f"{__name__}-{len(self.instances)}")
