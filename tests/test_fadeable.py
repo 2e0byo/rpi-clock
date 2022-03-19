@@ -68,3 +68,18 @@ async def test_percent_fade(mocker, start, end):
     step = -1 if end < start else 1
     duty_mock.assert_called_with(round(end * 50))
     assert duty_mock.call_count > 10
+
+
+async def test_cancel_fade(mocker):
+    f = concreter(Fadeable)
+    duty_mock = mocker.PropertyMock(return_value=0)
+    f.duty = duty_mock
+    f.max_duty = 50
+    f = f()
+    asyncio.create_task(f.fade(percent_duty=1, duration=1))
+    await asyncio.sleep(0.1)
+    task = f._fade_task
+    assert not task.done()
+    f.cancel_fade()
+    await asyncio.sleep(0.1)
+    assert task.cancelled()

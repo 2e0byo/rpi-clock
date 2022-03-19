@@ -28,7 +28,7 @@ class Fadeable(ABC):
         duration: int = 1,
     ):
         self.cancel_fade()
-        self._fade_task = self._fade(duty, percent_duty, duration)
+        self._fade_task = asyncio.create_task(self._fade(duty, percent_duty, duration))
         await self._fade_task
         self._fade_task = None
 
