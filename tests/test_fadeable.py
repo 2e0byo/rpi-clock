@@ -60,6 +60,12 @@ async def test_fade_freq(mocker):
     assert duty_mock.call_count < 50
 
 
+async def test_invalid_fade(mocker):
+    f, duty_mock = mock_fadeable(mocker, 0)
+    with pytest.raises(ValueError):
+        await f.fade(duration=10)
+
+
 @pytest.mark.parametrize(
     "start, end",
     [
