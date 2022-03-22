@@ -149,22 +149,33 @@ class Lamp(Fadeable):
         self.mode = mode
         self.max_duty = 1023
         self.pi = pi
-        pi.bb_spi_open(cs, miso, mosi, sclk, baud, mode)
+        self.spi_open()
         super().__init__(*args, **kwargs)
 
     @staticmethod
     def _convert(b: bytes):
         return int.from_bytes(b, "little")
 
+    def spi_xfer(self, data):
+        return self.pi.bb_spi_xfer(self.cs, data)
+
     @property
     def duty(self):
-        self.pi.bb_spi_xfer(self.cs, b"r")
+        self.spi_xfer(b"r")
         sleep(self.SETTLE_TIME_S)
-        return self._convert(self.pi.bb_spi_xfer(self.cs, [0] * 2)[1])
+        return self._convert(self.spi_xfer([0] * 2)[1])
 
     @duty.setter
     def duty(self, val: int):
         duty = int(val).to_bytes(2, "little")
+    def spi_open(self):
+        self.pi.bb_spi_open(
+            self.cs, self.miso, self.mosi, self.sclk, self.baud, self.mode
+        )
+
+    def spi_close(self):
+        self.pi.bb_spi_close(self.cs)
+
         for attempt in range(self.SPI_ATTEMPTS):
             self.pi.bb_spi_xfer(self.cs, b"s" + duty)
             sleep(self.SETTLE_TIME_S)
@@ -181,6 +192,6 @@ class Lamp(Fadeable):
 
     def __del__(self):
         try:
-            self.pi.bb_spi_close(self.cs)
+            self.spi_close()
         except Exception:
             pass
