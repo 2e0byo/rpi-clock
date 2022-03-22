@@ -36,6 +36,9 @@ class Fadeable(ABC):
         if self._fade_task:
             self._fade_task.cancel()
 
+    async def set_duty(self, val: int):
+        self.duty = val
+
     async def _fade(
         self,
         duty: int = None,
@@ -64,7 +67,7 @@ class Fadeable(ABC):
             start = monotonic()
             br = max(br, 0)
             br = min(br, self.max_duty)
-            self.duty = br
+            await self.set_duty(br)
             elapsed = monotonic() - start
             await asyncio.sleep(max(0, delay - elapsed))
         self.duty = duty
