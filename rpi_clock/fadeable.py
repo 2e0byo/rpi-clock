@@ -98,17 +98,14 @@ class Fadeable(ABC):
 class PWM(Fadeable):
     """A fadeable pwm output."""
 
-    MAX_DUTY = 50
-    FREQ = 10000
-
     def __init__(
-        self, pin, pi, *args, freq: int = None, max_duty: int = None, **kwargs
+        self, pin, pi, *args, freq: int = 10_000, max_duty: int = 50, **kwargs
     ):
         self.pin = pin
-        self.max_duty = max_duty or self.MAX_DUTY
+        self.max_duty = max_duty
         self.pi = pi
         pi.set_mode(self.pin, 1)
-        pi.set_PWM_frequency(self.pin, freq or self.FREQ)
+        pi.set_PWM_frequency(self.pin, freq)
         pi.set_PWM_range(self.pin, self.max_duty)
         super().__init__(*args, **kwargs)
         self._logger.debug(f"Started pwm on pin {self.pin}.")
