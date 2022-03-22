@@ -70,7 +70,7 @@ class Fadeable(ABC):
             await self.set_duty(br)
             elapsed = monotonic() - start
             await asyncio.sleep(max(0, delay - elapsed))
-        self.duty = duty
+        await self.set_duty(br)
 
     @property
     def percent_duty(self) -> float:
