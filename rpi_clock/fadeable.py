@@ -127,7 +127,7 @@ class Lamp(Fadeable):
     """An SPI controlled lamp."""
 
     SETTLE_TIME_S = 0.001
-    SPI_ATTEMPTS = 10
+    SPI_ATTEMPTS = 12
 
     def __init__(
         self,
@@ -168,6 +168,12 @@ class Lamp(Fadeable):
     @duty.setter
     def duty(self, val: int):
         duty = int(val).to_bytes(2, "little")
+        self.spi_xfer(b"s" + duty)
+        sleep(self.SETTLE_TIME_S)
+        resp = self._convert(self.spi_xfer([0] * 2)[1])
+        if resp != val:
+            raise SpiError(f"Failed to set lamp to {val}")
+
     def spi_open(self):
         self.pi.bb_spi_open(
             self.cs, self.miso, self.mosi, self.sclk, self.baud, self.mode
@@ -176,19 +182,31 @@ class Lamp(Fadeable):
     def spi_close(self):
         self.pi.bb_spi_close(self.cs)
 
-        for attempt in range(self.SPI_ATTEMPTS):
-            self.pi.bb_spi_xfer(self.cs, b"s" + duty)
-            sleep(self.SETTLE_TIME_S)
-            resp = self._convert(self.pi.bb_spi_xfer(self.cs, [0] * 2)[1])
-            if resp == val:
-                if attempt > 1:
-                    self._logger.debug(
-                        f"Set lamp to {val} after {attempt + 1} attempts."
-                    )
-                return
-            sleep(2 * self.SETTLE_TIME_S)
+    async def reset(self, long_=False):
+        self._logger.debug("Resetting")
+        self.pi.write(self.cs, 0)
+        await asyncio.sleep(3)
+        self.pi.write(self.cs, 1)
+        await asyncio.sleep(self.SETTLE_TIME_S)
+        self.spi_xfer([0] * 6)  # flush buffer: something isn't resetting properly...
 
-        raise SpiError(f"Failed to set lamp to {val} after {attempt + 1} attempts.")
+    async def set_duty(self, val: int):
+        for attempt in range(self.SPI_ATTEMPTS):
+            try:
+                self.duty = val
+                if attempt > 1:
+                    self._logger.debug(f"Set lamp to {val} after {attempt} attempts.")
+                return
+            except SpiError:
+                if attempt == 4:
+                    # if attempt and not attempt % 4:
+                    await self.reset()
+                else:
+                    await asyncio.sleep(
+                        0.3 * attempt
+                    )  # backing off is enough most of the time.
+
+        raise SpiError(f"Failed to set lamp to {val}")
 
     def __del__(self):
         try:
