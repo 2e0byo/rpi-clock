@@ -27,9 +27,9 @@ down_button["press"] = down
 
 async def toggle_backlight(*args):
     if lcd.backlight.percent_duty:
-        await lcd.backlight.fade(0)
+        await lcd.backlight.fade(percent_duty=0)
     else:
-        await lcd.backlight.fade(lcd.backlight.max_duty)
+        await lcd.backlight.fade(percent_duty=1)
 
 
 enter_button["press"] = toggle_backlight
@@ -44,7 +44,7 @@ async def clock_loop():
 
 
 loop = asyncio.get_event_loop()
-loop.create_task(alarm(datetime(year=2022, month=2, day=28, hour=8, minute=0).time()))
+loop.create_task(alarm(datetime(year=2022, month=2, day=28, hour=8, minute=15).time()))
 # loop.create_task(alarm((datetime.now() + timedelta(seconds=3)).time()))
 loop.create_task(clock_loop())
 loop.run_forever()

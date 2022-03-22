@@ -1,7 +1,9 @@
 import asyncio
 from datetime import datetime, timedelta
+
 from mopidy_asyncio_client import MopidyClient
-from .hal import volume, mute, lamp, enter_button, lcd
+
+from .hal import enter_button, lamp, lcd, mute, volume
 
 
 async def play():
@@ -21,29 +23,23 @@ async def stop():
 
 
 old = None
-tasks = []
 
 
 async def end_alarm():
-    for task in tasks:
-        try:
-            task.cancel()
-            print(task, "cancelled")
-        except Exception:
-            pass
-    mute(True)
     await stop()
     print("fade off lamp")
-    asyncio.create_task(lamp.fade(0))
+    asyncio.create_task(lamp.fade(duty=0))
     print("fade off volume")
-    asyncio.create_task(volume.fade(0))
+    await volume.fade(duty=0, duration=3)
+    mute(True)
     print("restore button")
     enter_button["press"] = old
 
 
 FADE_DURATION = 300
 # FADE_DURATION = 10
-MAX_VOLUME = 11
+START_VOLUME = 4 / 50
+MAX_VOLUME = 11 / 50
 
 
 async def alarm(when: datetime.time):
@@ -61,9 +57,12 @@ async def alarm(when: datetime.time):
         enter_button["press"] = end_alarm
         print("ring ring")
         lcd[1] = "ring ring"
-        await play()
-        mute(False)
-        x = lamp.fade(500, FADE_DURATION)
-        tasks.append(x)
-        await x
-        tasks.append(asyncio.create_task(volume.fade(MAX_VOLUME, 30)))
+        try:
+            await lamp.fade(duty=500, duration=FADE_DURATION)
+            await play()
+            mute(False)
+            volume.percent_duty = START_VOLUME
+            asyncio.create_task(volume.fade(percent_duty=MAX_VOLUME, duration=30))
+            asyncio.create_task(lcd.backlight.fade(percent_duty=1))
+        except asyncio.CancelledError:
+            pass

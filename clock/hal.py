@@ -1,4 +1,5 @@
-from .hardware import PWM, Button, Lamp, Lcd, LightSensor, Pin
+from .hardware import Button, Lcd, LightSensor, Pin, pi
+from .fadeable import PWM, Lamp
 
 BACKLIGHT_PIN = 6
 VOLUME_PIN = 26
@@ -8,13 +9,13 @@ UP_BUTTON = 16
 ENTER_BUTTON = 20
 DOWN_BUTTON = 21
 
-lamp = Lamp()
+lamp = Lamp(pi)
 
 
-backlight = PWM(BACKLIGHT_PIN)
+backlight = PWM(BACKLIGHT_PIN, pi)
 lcd = Lcd(backlight=backlight)
 
-volume = PWM(VOLUME_PIN)
+volume = PWM(VOLUME_PIN, pi)  # , freq=800, max_duty=250)
 mute = Pin(MUTE_PIN, Pin.OUT, True)
 mute(True)
 
