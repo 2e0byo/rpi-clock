@@ -50,9 +50,9 @@ async def test_press_release(button):
 
 async def test_long_press(button):
     press(button)
-    sleep_ms(LONG_MS + 2)
+    await sleep_ms(LONG_MS + 2)
     release(button)
-    sleep_ms(1)
+    await sleep_ms(1)
     button["press"].assert_called_once()
     button["release"].assert_called_once()
     button["double"].assert_not_called()
