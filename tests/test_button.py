@@ -61,14 +61,51 @@ async def test_long_press(button):
 
 async def test_double_press(button):
     press(button)
-    sleep_ms(1)
+    await sleep_ms(1)
     release(button)
-    sleep_ms(1)
+    await sleep_ms(1)
     press(button)
-    sleep_ms(1)
+    await sleep_ms(1)
     release(button)
-    sleep_ms(1)
+    await sleep_ms(1)
     button["long"].assert_not_called()
     button["double"].assert_called_once()
     assert len(button["press"].mock_calls) == 2
     assert len(button["release"].mock_calls) == 2
+
+
+async def test_single_press_suppress(button):
+    button.suppress = True
+    press(button)
+    await sleep_ms(1)
+    release(button)
+    await sleep_ms(1)
+    button["press"].assert_not_called()
+    button["release"].assert_called_once()
+    button["double"].assert_not_called()
+    button["long"].assert_not_called()
+
+
+async def test_long_press_suppress(button):
+    button.suppress = True
+    press(button)
+    await sleep_ms(LONG_MS + 2)
+    release(button)
+    await sleep_ms(1)
+    button["press"].assert_not_called()
+    button["release"].assert_not_called()
+    button["double"].assert_not_called()
+    button["long"].assert_called_once()
+
+
+async def test_double_press_suppress(button):
+    button.suppress = True
+    for _ in range(2):
+        press(button)
+        await sleep_ms(1)
+        release(button)
+        await sleep_ms(1)
+    button["press"].assert_not_called()
+    button["release"].assert_not_called()
+    button["double"].assert_called_once()
+    button["long"].assert_not_called()
