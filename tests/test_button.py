@@ -60,14 +60,12 @@ async def test_long_press(button):
 
 
 async def test_double_press(button):
-    press(button)
-    await sleep_ms(1)
-    release(button)
-    await sleep_ms(1)
-    press(button)
-    await sleep_ms(1)
-    release(button)
-    await sleep_ms(1)
+    for _ in range(2):
+        press(button)
+        await sleep_ms(0.5)
+        release(button)
+        await sleep_ms(0.5)
+
     button["long"].assert_not_called()
     button["double"].assert_called_once()
     assert len(button["press"].mock_calls) == 2
