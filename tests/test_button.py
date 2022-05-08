@@ -76,13 +76,14 @@ async def test_double_press(button):
 
 async def test_single_press_suppress(button):
     button.suppress = True
+    del button["press"]
+    del button["double"]
     press(button)
     await sleep_ms(1)
     release(button)
     await sleep_ms(1)
-    button["press"].assert_not_called()
     button["release"].assert_called_once()
-    button["double"].assert_not_called()
+    button["long"].assert_not_called()
     button["long"].assert_not_called()
 
 
