@@ -25,9 +25,13 @@ def release(button: Button):
     button._callback(0, Button.RISING_EDGE, 0)
 
 
+async def sleep_ms(duration):
+    await asyncio.sleep(duration / 1_000)
+
+
 async def test_press(button):
     press(button)
-    await asyncio.sleep(0.001)
+    await sleep_ms(1)
     button["press"].assert_called_once()
     button["release"].assert_not_called()
     button["double"].assert_not_called()
@@ -37,8 +41,13 @@ async def test_press(button):
 async def test_press_release(button):
     await test_press(button)
     release(button)
-    await asyncio.sleep(0.001)
+    await sleep_ms(1)
     button["press"].assert_called_once()
     button["release"].assert_called_once()
     button["double"].assert_not_called()
     button["long"].assert_not_called()
+
+
+async def test_long_press(button):
+    press(button)
+    await asyncio.sleep((LONG_MS + 1) / 1_000)
