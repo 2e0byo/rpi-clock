@@ -160,6 +160,7 @@ class Button:
                         await self.call(self._hooks["double"])
                     else:
                         self._double_timer.trigger()
+                        await asyncio.sleep(0)
                         self._double_pending = True
 
             elif edge == self.rising_edge:
