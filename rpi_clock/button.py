@@ -214,7 +214,7 @@ class PiButton(Button):
         **kwargs,
     ):
         kwargs["inverted"] = inverted
-        super.__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         pi.set_mode(pin, pigpio.INPUT)
         pi.set_pull_up_down(pin, pigpio.PUD_DOWN if inverted else pigpio.PUD_UP)
         pi.set_glitch_filter(pin, debounce_ms)
