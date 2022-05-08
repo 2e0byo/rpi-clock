@@ -199,6 +199,9 @@ class Button:
     def __getitem__(self, key: str):
         return self._hooks[key]
 
+    def __delitem__(self, key: str):
+        self._hooks[key] = None
+
 
 class PiButton(Button):
     def __init__(
