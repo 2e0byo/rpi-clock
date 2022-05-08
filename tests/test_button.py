@@ -4,7 +4,7 @@ import pytest
 from rpi_clock.button import Button
 
 LONG_MS = 10
-DOUBLE_MS = 2
+DOUBLE_MS = 6
 
 
 @pytest.fixture
