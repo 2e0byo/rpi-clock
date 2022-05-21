@@ -28,6 +28,7 @@ class Button:
         self.falling_edge = self.FALLING_EDGE
         if inverted:
             self.rising_edge, self.falling_edge = self.falling_edge, self.rising_edge
+        self.inverted = inverted
         self._hooks = {k: None for k in self.HOOKS}
 
         self._double_ms = double_ms

@@ -19,12 +19,18 @@ def button(request, mocker):
 
 def press(button: Button):
     print("--pressing--")
-    button._callback(0, Button.FALLING_EDGE, 0)
+    if button.inverted:
+        button._callback(0, Button.RISING_EDGE, 0)
+    else:
+        button._callback(0, Button.FALLING_EDGE, 0)
 
 
 def release(button: Button):
     print("--releasing--")
-    button._callback(0, Button.RISING_EDGE, 0)
+    if button.inverted:
+        button._callback(0, Button.FALLING_EDGE, 0)
+    else:
+        button._callback(0, Button.RISING_EDGE, 0)
 
 
 async def sleep_ms(duration):
