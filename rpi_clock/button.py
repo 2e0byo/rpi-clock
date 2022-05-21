@@ -13,7 +13,6 @@ class Button:
     HOOKS = {"press", "release", "long", "double"}
     FALLING_EDGE = 0
     RISING_EDGE = 1
-    WDT = 2
 
     def __init__(
         self,
@@ -141,13 +140,8 @@ class Button:
                     self._long_timer.cancel()
                     self._double_ran = False
 
-            elif edge == self.WDT:
-                await self._timeout()
             else:
                 raise ValueError(f"Unknown edge {edge} received.")
-
-    async def _timeout(self):
-        raise NotImplementedError()
 
     def __setitem__(self, key: str, fn: callable = None):
         """Set a function to run."""

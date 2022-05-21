@@ -207,3 +207,12 @@ def test_properties(button):
 def test_invalid_hook(button):
     with pytest.raises(ValueError):
         button["nonsuch"] = lambda x: x
+
+
+async def test_invalid_edge(button):
+    button._callback(0, 99, 0)
+    task = next(
+        x for x in asyncio.all_tasks() if "_button_check_loop" in x.get_coro().__name__
+    )
+    await sleep_ms(1)
+    assert task.exception()
