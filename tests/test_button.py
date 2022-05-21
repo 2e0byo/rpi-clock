@@ -2,8 +2,6 @@ import asyncio
 from collections import namedtuple
 
 import pytest
-from flaky import flaky
-from rpi_clock.button import Button
 
 LONG_MS = 10
 DOUBLE_MS = 6
@@ -16,8 +14,6 @@ ButtonConfig = namedtuple("ButtonConfig", "invert,coro")
     params=[
         ButtonConfig(invert=False, coro=False),
         ButtonConfig(invert=True, coro=False),
-        ButtonConfig(invert=False, coro=True),
-        ButtonConfig(invert=True, coro=True),
     ]
 )
 def button(request, mocker):
@@ -61,10 +57,28 @@ async def sleep_ms(duration):
     await asyncio.sleep(duration / 1_000)
 
 
+async def test_call_await(mocker, button):
+    m = mocker.AsyncMock()
+    await button.call(m)
+    await sleep_ms(1)
+    m.assert_awaited_once()
+
+
 async def test_press(button):
     press(button)
     await sleep_ms(1)
     called_once(button, "press")
+    not_called(button, "release")
+    not_called(button, "double")
+    not_called(button, "long")
+
+
+async def test_press_coro(mocker, button):
+    m = mocker.AsyncMock()
+    button["press"] = m
+    press(button)
+    await sleep_ms(1)
+    m.assert_awaited_once()
     not_called(button, "release")
     not_called(button, "double")
     not_called(button, "long")
@@ -80,7 +94,6 @@ async def test_press_release(button):
     not_called(button, "long")
 
 
-@flaky
 async def test_long_press(button):
     press(button)
     await sleep_ms(LONG_MS + 2)
@@ -92,7 +105,6 @@ async def test_long_press(button):
     called_once(button, "long")
 
 
-@flaky
 async def test_double_press(button):
     for _ in range(2):
         press(button)
@@ -131,7 +143,6 @@ async def test_single_press_suppress(button):
     not_called(button, "long")
 
 
-@flaky
 async def test_single_press_suppress_double(button):
     button.suppress = True
     del button["press"]
@@ -147,7 +158,6 @@ async def test_single_press_suppress_double(button):
     not_called(button, "double")
 
 
-@flaky
 async def test_single_press_suppress_double(button):
     button.suppress = True
     del button["press"]
@@ -162,7 +172,6 @@ async def test_single_press_suppress_double(button):
     not_called(button, "double")
 
 
-@flaky
 async def test_single_press_suppress_double_no_long(button):
     button.suppress = True
     del button["press"]
@@ -173,7 +182,6 @@ async def test_single_press_suppress_double_no_long(button):
     not_called(button, "double")
 
 
-@flaky
 async def test_single_press_suppress_long(button):
     button.suppress = True
     del button["press"]
@@ -187,7 +195,6 @@ async def test_single_press_suppress_long(button):
     not_called(button, "release")
 
 
-@flaky
 async def test_long_press_suppress(button):
     button.suppress = True
     del button["press"]
@@ -200,7 +207,6 @@ async def test_long_press_suppress(button):
     called_once(button, "long")
 
 
-@flaky
 async def test_long_press_suppress_double(button):
     button.suppress = True
     del button["press"]
@@ -213,7 +219,6 @@ async def test_long_press_suppress_double(button):
     called_once(button, "long")
 
 
-@flaky
 async def test_double_press_suppress(button):
     button.suppress = True
     del button["press"]
