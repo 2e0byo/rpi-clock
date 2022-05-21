@@ -136,3 +136,13 @@ async def test_double_press_suppress(button):
     button["release"].assert_not_called()
     button["double"].assert_called_once()
     button["long"].assert_not_called()
+
+
+def test_properties(button):
+    assert button.double_ms == DOUBLE_MS
+    button.double_ms = 2 * DOUBLE_MS
+    assert button.double_ms == 2 * DOUBLE_MS
+
+    assert button.long_ms == LONG_MS
+    button.long_ms = 2 * LONG_MS
+    assert button.long_ms == 2 * LONG_MS
