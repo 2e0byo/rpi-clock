@@ -202,3 +202,8 @@ def test_properties(button):
     assert button.long_ms == LONG_MS
     button.long_ms = 2 * LONG_MS
     assert button.long_ms == 2 * LONG_MS
+
+
+def test_invalid_hook(button):
+    with pytest.raises(ValueError):
+        button["nonsuch"] = lambda x: x
