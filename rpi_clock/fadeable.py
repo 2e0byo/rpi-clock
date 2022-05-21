@@ -150,6 +150,7 @@ class Lamp(Fadeable):
         self.max_duty = 1023
         self.pi = pi
         self.spi_open()
+        self._duty = None
         super().__init__(*args, **kwargs)
 
     @staticmethod
@@ -161,6 +162,9 @@ class Lamp(Fadeable):
 
     @property
     def duty(self):
+        return self._duty
+
+    def get_hardware_duty(self):
         self.spi_xfer(b"r")
         sleep(self.SETTLE_TIME_S)
         return self._convert(self.spi_xfer([0] * 2)[1])
@@ -173,6 +177,7 @@ class Lamp(Fadeable):
         resp = self._convert(self.spi_xfer([0] * 2)[1])
         if resp != val:
             raise SpiError(f"Failed to set lamp to {val}")
+        self._duty = val
 
     def spi_open(self):
         self.pi.bb_spi_open(
