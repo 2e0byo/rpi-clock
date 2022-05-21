@@ -117,3 +117,13 @@ def test_percent_duty_bounding(mocker):
     mock_duty.assert_called_with(0)
     f.percent_duty = 2
     mock_duty.assert_called_with(50)
+
+
+def test_pwm(mocker):
+    pin = mocker.Mock()
+    pi = mocker.Mock()
+    pwm = PWM(pin, pi)
+    pi.set_PWM_dutycycle.assert_called_once_with(pin, 0)
+    pi.get_PWM_dutycycle.assert_not_called()
+    x = pwm.duty
+    pi.get_PWM_dutycycle.assert_called_once_with(pin)
