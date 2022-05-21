@@ -144,7 +144,7 @@ class Button:
             elif edge == self.WDT:
                 await self._timeout()
             else:
-                raise Exception(f"Unknown edge {edge} received.")
+                raise ValueError(f"Unknown edge {edge} received.")
 
     async def _timeout(self):
         raise NotImplementedError()
@@ -152,7 +152,7 @@ class Button:
     def __setitem__(self, key: str, fn: callable = None):
         """Set a function to run."""
         if key not in self.HOOKS:
-            raise Exception(f"Function {key} is not a valid hook")
+            raise ValueError(f"Function {key} is not a valid hook")
         self._hooks[key] = fn
         if key == "long":
             self._long_timer.fn = fn
