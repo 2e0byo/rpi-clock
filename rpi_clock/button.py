@@ -54,7 +54,7 @@ class Button:
             return
 
         if (
-            not self.state
+            self.state
             and not self._hooks["long"]
             or self._hooks["long"]
             and not self._long_timer.running
