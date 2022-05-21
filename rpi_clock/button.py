@@ -58,7 +58,7 @@ class Button:
             or self._hooks["long"]
             and not self._long_timer.running
         ):
-            await self.call(self._hooks["release"])
+            asyncio.create_task(self.call(self._hooks["release"]))
 
     @property
     def double_ms(self):
@@ -88,9 +88,8 @@ class Button:
         self._edge = level
         self._loop.call_soon_threadsafe(lambda: self._event.set())
 
-    @staticmethod
-    async def call(fn):
-        x = fn()
+    async def call(self, fn):
+        x = fn(self)
         if asyncio.iscoroutine(x):
             x = await x
         return x
@@ -105,7 +104,7 @@ class Button:
             if edge == self.falling_edge:
                 self.state = True
                 if self._hooks["press"]:
-                    await self.call(self._hooks["press"])
+                    asyncio.create_task(self.call(self._hooks["press"]))
 
                 if self._hooks["long"]:
                     self._long_timer.trigger()
@@ -115,7 +114,7 @@ class Button:
                         self._double_timer.cancel()
                         self._double_pending = False
                         self._double_ran = True
-                        await self.call(self._hooks["double"])
+                        asyncio.create_task(self.call(self._hooks["double"]))
                     else:
                         self._double_timer.trigger()
                         await asyncio.sleep(0)
@@ -133,9 +132,9 @@ class Button:
                                 or (self._hooks["long"] and self._long_timer.running)
                             )
                         ):
-                            await self.call(self._hooks["release"])
+                            asyncio.create_task(self.call(self._hooks["release"]))
                     else:
-                        await self.call(self._hooks["release"])
+                        asyncio.create_task(self.call(self._hooks["release"]))
 
                     self._long_timer.cancel()
                     self._double_ran = False
