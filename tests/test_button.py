@@ -1,20 +1,44 @@
 import asyncio
+from collections import namedtuple
 
 import pytest
+from flaky import flaky
 from rpi_clock.button import Button
 
 LONG_MS = 10
 DOUBLE_MS = 6
 
 
-@pytest.fixture(params=[False, True])
+ButtonConfig = namedtuple("ButtonConfig", "invert,coro")
+
+
+@pytest.fixture(
+    params=[
+        ButtonConfig(invert=False, coro=False),
+        ButtonConfig(invert=True, coro=False),
+        ButtonConfig(invert=False, coro=True),
+        ButtonConfig(invert=True, coro=True),
+    ]
+)
 def button(request, mocker):
-    b = Button(long_ms=LONG_MS, double_ms=DOUBLE_MS, inverted=request.param)
-    b["press"] = mocker.Mock()
-    b["release"] = mocker.Mock()
-    b["double"] = mocker.Mock()
-    b["long"] = mocker.Mock()
+    b = Button(long_ms=LONG_MS, double_ms=DOUBLE_MS, inverted=request.param.invert)
+    mock = mocker.Mock if not request.param.coro else mocker.AsyncMock
+    b["press"] = mock()
+    b["release"] = mock()
+    b["double"] = mock()
+    b["long"] = mock()
+    b.coro = request.param.coro
     return b
+
+
+def called_once(button, fn):
+    verb = "awaited" if button.coro else "called"
+    getattr(button[fn], f"assert_{verb}_once")()
+
+
+def not_called(button, fn):
+    verb = "awaited" if button.coro else "called"
+    getattr(button[fn], f"assert_not_{verb}")()
 
 
 def press(button: Button):
@@ -40,33 +64,35 @@ async def sleep_ms(duration):
 async def test_press(button):
     press(button)
     await sleep_ms(1)
-    button["press"].assert_called_once()
-    button["release"].assert_not_called()
-    button["double"].assert_not_called()
-    button["long"].assert_not_called()
+    called_once(button, "press")
+    not_called(button, "release")
+    not_called(button, "double")
+    not_called(button, "long")
 
 
 async def test_press_release(button):
     await test_press(button)
     release(button)
     await sleep_ms(1)
-    button["press"].assert_called_once()
-    button["release"].assert_called_once()
-    button["double"].assert_not_called()
-    button["long"].assert_not_called()
+    called_once(button, "press")
+    called_once(button, "release")
+    not_called(button, "double")
+    not_called(button, "long")
 
 
+@flaky
 async def test_long_press(button):
     press(button)
     await sleep_ms(LONG_MS + 2)
     release(button)
     await sleep_ms(1)
-    button["press"].assert_called_once()
-    button["release"].assert_called_once()
-    button["double"].assert_not_called()
-    button["long"].assert_called_once()
+    called_once(button, "press")
+    called_once(button, "release")
+    not_called(button, "double")
+    called_once(button, "long")
 
 
+@flaky
 async def test_double_press(button):
     for _ in range(2):
         press(button)
@@ -74,10 +100,10 @@ async def test_double_press(button):
         release(button)
         await sleep_ms(0.5)
 
-    button["long"].assert_not_called()
-    button["double"].assert_called_once()
-    assert len(button["press"].mock_calls) == 2
-    assert len(button["release"].mock_calls) == 2
+    not_called(button, "long")
+    called_once(button, "double")
+    assert sum(1 for x in button["press"].mock_calls if "bool" not in repr(x)) == 2
+    assert sum(1 for x in button["release"].mock_calls if "bool" not in repr(x)) == 2
 
 
 async def test_double_press_only(button):
@@ -90,7 +116,7 @@ async def test_double_press_only(button):
         release(button)
         await sleep_ms(0.5)
 
-    button["double"].assert_called_once()
+    called_once(button, "double")
 
 
 async def test_single_press_suppress(button):
@@ -101,10 +127,11 @@ async def test_single_press_suppress(button):
     await sleep_ms(1)
     release(button)
     await sleep_ms(1)
-    button["release"].assert_called_once()
-    button["long"].assert_not_called()
+    called_once(button, "release")
+    not_called(button, "long")
 
 
+@flaky
 async def test_single_press_suppress_double(button):
     button.suppress = True
     del button["press"]
@@ -112,14 +139,15 @@ async def test_single_press_suppress_double(button):
     await sleep_ms(1)
     release(button)
     await sleep_ms(1)
-    button["release"].assert_not_called()
-    button["long"].assert_not_called()
+    not_called(button, "release")
+    not_called(button, "long")
     await sleep_ms(DOUBLE_MS)
-    button["release"].assert_called_once()
-    button["long"].assert_not_called()
-    button["double"].assert_not_called()
+    called_once(button, "release")
+    not_called(button, "long")
+    not_called(button, "double")
 
 
+@flaky
 async def test_single_press_suppress_double(button):
     button.suppress = True
     del button["press"]
@@ -128,35 +156,38 @@ async def test_single_press_suppress_double(button):
     await sleep_ms(1)
     release(button)
     await sleep_ms(1)
-    button["long"].assert_not_called()
+    not_called(button, "long")
     await sleep_ms(DOUBLE_MS)
-    button["long"].assert_not_called()
-    button["double"].assert_not_called()
+    not_called(button, "long")
+    not_called(button, "double")
 
 
+@flaky
 async def test_single_press_suppress_double_no_long(button):
     button.suppress = True
     del button["press"]
     del button["long"]
     press(button)
     await sleep_ms(DOUBLE_MS + 2)
-    button["release"].assert_called_once()
-    button["double"].assert_not_called()
+    called_once(button, "release")
+    not_called(button, "double")
 
 
+@flaky
 async def test_single_press_suppress_long(button):
     button.suppress = True
     del button["press"]
     press(button)
     await sleep_ms(LONG_MS + 5)
-    button["release"].assert_not_called()
-    button["double"].assert_not_called()
-    button["long"].assert_called_once()
+    not_called(button, "release")
+    not_called(button, "double")
+    called_once(button, "long")
     release(button)
     await sleep_ms(1)
-    button["release"].assert_not_called()
+    not_called(button, "release")
 
 
+@flaky
 async def test_long_press_suppress(button):
     button.suppress = True
     del button["press"]
@@ -165,10 +196,11 @@ async def test_long_press_suppress(button):
     await sleep_ms(LONG_MS + 2)
     release(button)
     await sleep_ms(1)
-    button["release"].assert_not_called()
-    button["long"].assert_called_once()
+    not_called(button, "release")
+    called_once(button, "long")
 
 
+@flaky
 async def test_long_press_suppress_double(button):
     button.suppress = True
     del button["press"]
@@ -176,11 +208,12 @@ async def test_long_press_suppress_double(button):
     await sleep_ms(LONG_MS + 2)
     release(button)
     await sleep_ms(1)
-    button["release"].assert_not_called()
-    button["double"].assert_not_called()
-    button["long"].assert_called_once()
+    not_called(button, "release")
+    not_called(button, "double")
+    called_once(button, "long")
 
 
+@flaky
 async def test_double_press_suppress(button):
     button.suppress = True
     del button["press"]
@@ -189,9 +222,9 @@ async def test_double_press_suppress(button):
         await sleep_ms(1)
         release(button)
         await sleep_ms(1)
-    button["release"].assert_not_called()
-    button["double"].assert_called_once()
-    button["long"].assert_not_called()
+    not_called(button, "release")
+    called_once(button, "double")
+    not_called(button, "long")
 
 
 def test_properties(button):
