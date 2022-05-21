@@ -2,6 +2,7 @@ import asyncio
 from collections import namedtuple
 
 import pytest
+from rpi_clock.button import Button, PiButton
 
 LONG_MS = 10
 DOUBLE_MS = 6
@@ -254,3 +255,14 @@ async def test_invalid_edge(button):
     )
     await sleep_ms(1)
     assert task.exception()
+
+
+async def test_pibutton(mocker):
+    pi = mocker.Mock()
+    pin = mocker.Mock()
+    button = PiButton(pi, pin, double_ms=DOUBLE_MS, long_ms=LONG_MS)
+    assert button.double_ms == DOUBLE_MS
+    assert button.long_ms == LONG_MS
+    pi.set_glitch_filter.assert_called_once()
+    pi.set_pull_up_down.assert_called_once()
+    pi.set_mode.assert_called_once()
