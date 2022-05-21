@@ -79,7 +79,7 @@ class Button:
         self._long_timer = Timer(long_ms)
         self._double_timer = Timer(double_ms, self._doubleclick_timeout)
         self._double_pending = False
-        self._double_ran = True
+        self._double_ran = False
         self.state = False
         self._loop.create_task(self._button_check_loop())
 
@@ -170,8 +170,10 @@ class Button:
                         if (
                             not self._double_pending
                             and not self._double_ran
-                            and not self._hooks["long"]
-                            or (self._hooks["long"] and self._long_timer.running)
+                            and (
+                                not self._hooks["long"]
+                                or (self._hooks["long"] and self._long_timer.running)
+                            )
                         ):
                             await self.call(self._hooks["release"])
                     else:
