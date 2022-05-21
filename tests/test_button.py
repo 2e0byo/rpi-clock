@@ -80,6 +80,19 @@ async def test_double_press(button):
     assert len(button["release"].mock_calls) == 2
 
 
+async def test_double_press_only(button):
+    del button["long"]
+    del button["release"]
+    del button["press"]
+    for _ in range(2):
+        press(button)
+        await sleep_ms(0.5)
+        release(button)
+        await sleep_ms(0.5)
+
+    button["double"].assert_called_once()
+
+
 async def test_single_press_suppress(button):
     button.suppress = True
     del button["press"]
