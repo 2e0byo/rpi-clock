@@ -7,9 +7,9 @@ LONG_MS = 10
 DOUBLE_MS = 6
 
 
-@pytest.fixture
-def button(mocker):
-    b = Button(long_ms=LONG_MS, double_ms=DOUBLE_MS)
+@pytest.fixture(params=[False, True])
+def button(request, mocker):
+    b = Button(long_ms=LONG_MS, double_ms=DOUBLE_MS, inverted=request.param)
     b["press"] = mocker.Mock()
     b["release"] = mocker.Mock()
     b["double"] = mocker.Mock()
