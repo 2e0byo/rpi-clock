@@ -24,6 +24,7 @@ class Button(UserDict):
         double_ms: int = 400,
         suppress: bool = False,
         name: str = None,
+        blocking: bool = False,
     ):
         self._event = asyncio.Event()
         self._edge: int = None
@@ -50,6 +51,8 @@ class Button(UserDict):
         self.name = name or f"Button-{len(self.instances)}"
         self.instances.append(self.name)
         self._logger = logging.getLogger(self.name)
+        self.blocking = blocking
+        self.in_progress = False
 
     async def _doubleclick_timeout(self):
         """In suppress mode, work out if a double click has expired, and if so,
@@ -99,11 +102,14 @@ class Button(UserDict):
         self._loop.call_soon_threadsafe(lambda: self._event.set())
 
     async def call(self, hook: str):
+        if self.blocking and self.in_progress:
+            return
+        self.in_progress = True
         self._logger.debug(f"Calling {hook}.")
         x = self.data[hook](self)
         if asyncio.iscoroutine(x):
             x = await x
-        return x
+        self.in_progress = False
 
     async def _button_check_loop(self):
         """Respond to events from the callback."""
