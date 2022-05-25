@@ -27,6 +27,8 @@ volume = PWM(VOLUME_PIN, pi)
 mute = Pin(pi, MUTE_PIN, Pin.OUT, inverted=True)
 mute(True)
 
-up_button = PiButton(pi, UP_BUTTON, suppress=True, name="UpButton")
-down_button = PiButton(pi, DOWN_BUTTON, suppress=True, name="DownButton")
-enter_button = PiButton(pi, ENTER_BUTTON, suppress=True, name="EnterButton")
+up_button = PiButton(pi, UP_BUTTON, suppress=True, name="UpButton", blocking=True)
+down_button = PiButton(pi, DOWN_BUTTON, suppress=True, name="DownButton", blocking=True)
+enter_button = PiButton(
+    pi, ENTER_BUTTON, suppress=True, name="EnterButton", blocking=True
+)
