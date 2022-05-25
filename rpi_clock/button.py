@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from collections import UserDict
 
 import pigpio
@@ -14,6 +15,7 @@ class Button(UserDict):
     HOOKS = {"press", "release", "long", "double"}
     FALLING_EDGE = 0
     RISING_EDGE = 1
+    instances = []
 
     def __init__(
         self,
@@ -21,6 +23,7 @@ class Button(UserDict):
         long_ms: int = 1_000,
         double_ms: int = 400,
         suppress: bool = False,
+        name: str = None,
     ):
         self._event = asyncio.Event()
         self._edge: int = None
@@ -41,6 +44,9 @@ class Button(UserDict):
         self._double_ran = False
         self.state = False
         self._loop.create_task(self._button_check_loop())
+        self.name = name or f"Button-{len(self.instances)}"
+        self.instances.append(self.name)
+        self._logger = logging.getLogger(name)
 
     async def _doubleclick_timeout(self):
         """In suppress mode, work out if a double click has expired, and if so,
@@ -97,12 +103,12 @@ class Button(UserDict):
 
     async def _button_check_loop(self):
         """Respond to events from the callback."""
-        print("\n\n\nIn Loop \n\n")
         while True:
             await self._event.wait()
             edge = self._edge
             self._event.clear()
             if edge == self.falling_edge:
+                self._logger.debug("Got falling edge.")
                 self.state = True
                 if self.data["press"]:
                     asyncio.create_task(self.call(self.data["press"]))
@@ -122,6 +128,7 @@ class Button(UserDict):
                         self._double_pending = True
 
             elif edge == self.rising_edge:
+                self._logger.debug("Got rising edge.")
                 self.state = False
                 if self.data["release"]:
                     if self.suppress:
