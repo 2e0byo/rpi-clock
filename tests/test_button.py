@@ -144,6 +144,29 @@ async def test_single_press_suppress(button):
     not_called(button, "long")
 
 
+async def test_long_hold(button):
+    del button["press"]
+    press(button)
+    await sleep_ms(LONG_MS + 1)
+    called_once(button, "long")
+    release(button)
+    await sleep_ms(1)
+    called_once(button, "release")
+    not_called(button, "double")
+
+
+async def test_long_hold_suppress(button):
+    button.suppress = True
+    del button["press"]
+    press(button)
+    await sleep_ms(LONG_MS + 1)
+    called_once(button, "long")
+    release(button)
+    await sleep_ms(1)
+    not_called(button, "release")
+    not_called(button, "double")
+
+
 async def test_single_press_suppress_double(button):
     button.suppress = True
     del button["press"]
