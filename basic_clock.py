@@ -113,9 +113,10 @@ async def toggle_backlight(*args):
 
 
 # enter_button["press"] = toggle_backlight
-enter_button["press"] = fade_up_down
 up_button["press"] = toggle_backlight
 down_button["press"] = toggle_backlight
+enter_button["long"] = fade_up_down
+enter_button["release"] = toggle_backlight
 
 
 async def clock_loop():
