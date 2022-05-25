@@ -11,13 +11,18 @@ from rpi_clock.hal import down_button, enter_button, lamp, lcd, mute, up_button,
 
 logger = getLogger(__name__)
 
+
+async def queue_playlist(mopidy, name: str):
+    playlists = await mopidy.playlists.as_list()
+    playlist = next(x["uri"] for x in playlists if x["name"] == name)
+    tracks = await mopidy.playlists.lookup(playlist)
+    await mopidy.tracklist.add(uris=[x["uri"] for x in tracks["tracks"]])
+
+
 async def play():
     async with MopidyClient(host="localhost") as mopidy:
-        playlists = await mopidy.playlists.as_list()
-        alarum = next(x["uri"] for x in playlists if x["name"] == "alarm")
-        tracks = await mopidy.playlists.lookup(alarum)
         await mopidy.tracklist.clear()
-        await mopidy.tracklist.add(uris=[x["uri"] for x in tracks["tracks"]])
+        await queue_playlist(mopidy, "alarm")
         await mopidy.tracklist.shuffle()
         await mopidy.playback.play()
 
