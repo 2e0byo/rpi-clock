@@ -1,11 +1,12 @@
 import asyncio
+from collections import UserDict
 
 import pigpio
 
 from .timer import Timer
 
 
-class Button:
+class Button(UserDict):
     """A button, api loosely inspired by Peter Hinch's micropython `Pushbutton`.
 
     This class assumes its `.callback()` will be called from elsewhere.  It mostly exists for testing."""
@@ -28,7 +29,7 @@ class Button:
         if inverted:
             self.rising_edge, self.falling_edge = self.falling_edge, self.rising_edge
         self.inverted = inverted
-        self._hooks = {k: None for k in self.HOOKS}
+        self.data = {k: None for k in self.HOOKS}
 
         self._double_ms = double_ms
         self._long_ms = long_ms
@@ -49,16 +50,16 @@ class Button:
         if not self.suppress:
             return
 
-        if not self._hooks["release"]:
+        if not self.data["release"]:
             return
 
         if (
             self.state
-            and not self._hooks["long"]
-            or self._hooks["long"]
+            and not self.data["long"]
+            or self.data["long"]
             and not self._long_timer.running
         ):
-            asyncio.create_task(self.call(self._hooks["release"]))
+            asyncio.create_task(self.call(self.data["release"]))
 
     @property
     def double_ms(self):
@@ -103,18 +104,18 @@ class Button:
             self._event.clear()
             if edge == self.falling_edge:
                 self.state = True
-                if self._hooks["press"]:
-                    asyncio.create_task(self.call(self._hooks["press"]))
+                if self.data["press"]:
+                    asyncio.create_task(self.call(self.data["press"]))
 
-                if self._hooks["long"]:
+                if self.data["long"]:
                     self._long_timer.trigger()
 
-                if self._hooks["double"]:
+                if self.data["double"]:
                     if self._double_timer.running:
                         self._double_timer.cancel()
                         self._double_pending = False
                         self._double_ran = True
-                        asyncio.create_task(self.call(self._hooks["double"]))
+                        asyncio.create_task(self.call(self.data["double"]))
                     else:
                         self._double_timer.trigger()
                         await asyncio.sleep(0)
@@ -122,19 +123,19 @@ class Button:
 
             elif edge == self.rising_edge:
                 self.state = False
-                if self._hooks["release"]:
+                if self.data["release"]:
                     if self.suppress:
                         if (
                             not self._double_pending
                             and not self._double_ran
                             and (
-                                not self._hooks["long"]
-                                or (self._hooks["long"] and self._long_timer.running)
+                                not self.data["long"]
+                                or (self.data["long"] and self._long_timer.running)
                             )
                         ):
-                            asyncio.create_task(self.call(self._hooks["release"]))
+                            asyncio.create_task(self.call(self.data["release"]))
                     else:
-                        asyncio.create_task(self.call(self._hooks["release"]))
+                        asyncio.create_task(self.call(self.data["release"]))
 
                     self._long_timer.cancel()
                     self._double_ran = False
@@ -146,15 +147,15 @@ class Button:
         """Set a function to run."""
         if key not in self.HOOKS:
             raise ValueError(f"Function {key} is not a valid hook")
-        self._hooks[key] = fn
+        self.data[key] = fn
         if key == "long":
             self._long_timer.fn = fn
 
     def __getitem__(self, key: str):
-        return self._hooks[key]
+        return self.data[key]
 
     def __delitem__(self, key: str):
-        self._hooks[key] = None
+        self.data[key] = None
 
 
 class PiButton(Button):

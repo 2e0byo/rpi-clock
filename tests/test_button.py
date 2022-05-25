@@ -289,3 +289,16 @@ async def test_pibutton(mocker):
     pi.set_glitch_filter.assert_called_once()
     pi.set_pull_up_down.assert_called_once()
     pi.set_mode.assert_called_once()
+
+
+def test_dump(button):
+    fns = {k: button.pop(k) for k in button}
+    assert not button["long"]
+    assert not button["press"]
+    assert not button["release"]
+    assert not button["double"]
+    button |= fns
+    assert button["long"]
+    assert button["press"]
+    assert button["release"]
+    assert button["double"]
