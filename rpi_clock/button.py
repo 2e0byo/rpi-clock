@@ -49,7 +49,7 @@ class Button(UserDict):
         self._loop.create_task(self._button_check_loop())
         self.name = name or f"Button-{len(self.instances)}"
         self.instances.append(self.name)
-        self._logger = logging.getLogger(name)
+        self._logger = logging.getLogger(self.name)
 
     async def _doubleclick_timeout(self):
         """In suppress mode, work out if a double click has expired, and if so,
