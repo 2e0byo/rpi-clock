@@ -78,12 +78,22 @@ async def alarm(when: datetime.time):
             pass
 
 
+MIN_BRIGHTNESS = 0.03
+
+
 async def fade_up_down(button):
-    delta = -0.002 if lamp.duty > 0 else 0.002
+    if lamp.duty > 0:
+        delta = -0.005
+    else:
+        delta = 0.005
+        lamp.percent_duty = MIN_BRIGHTNESS
     while button.state:
+        print(f"{lamp.percent_duty:1.2}", end="\r", flush=True)
         duty = lamp._convert_duty(lamp.percent_duty + delta)
         await lamp.set_duty(duty)
-        await asyncio.sleep(0.02)
+        await asyncio.sleep(0.05)
+    if lamp.percent_duty < MIN_BRIGHTNESS:
+        lamp.percent_duty = 0
 
 
 def up(*args):
