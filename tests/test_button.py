@@ -58,12 +58,52 @@ async def sleep_ms(duration):
     await asyncio.sleep(duration / 1_000)
 
 
+class StateDependantCallback:
+    def __init__(self):
+        self.state = None
+
+    async def __call__(self, btn):
+        self.state = btn.state
+        while btn.state is self.state:
+            await sleep_ms(0)
+        self.state = btn.state
+
+
 async def test_call_await(mocker, button):
     m = mocker.AsyncMock()
     button["press"] = m
     await button.call("press")
     await sleep_ms(1)
     m.assert_awaited_once()
+
+
+class Blocker:
+    def __init__(self):
+        self.blocked = True
+        self.called = False
+
+    async def __call__(self, btn):
+        self.called = True
+        while self.blocked:
+            await sleep_ms(1)
+
+
+async def test_blocking_call(mocker, button):
+    button.blocking = True
+    button["press"] = Blocker()
+    button["release"] = mocker.AsyncMock()
+    assert not button.in_progress
+    asyncio.create_task(button.call("press"))
+    await sleep_ms(1)
+    assert button["press"].called
+    asyncio.create_task(button.call("release"))
+    await sleep_ms(1)
+    not_called(button, "release")
+    button["press"].blocked = False
+    await sleep_ms(1)
+    asyncio.create_task(button.call("release"))
+    await sleep_ms(1)
+    called_once(button, "release")
 
 
 async def test_press(button):
@@ -304,17 +344,6 @@ def test_dump(button):
     assert button["press"]
     assert button["release"]
     assert button["double"]
-
-
-class StateDependantCallback:
-    def __init__(self):
-        self.state = None
-
-    async def __call__(self, btn):
-        self.state = btn.state
-        while btn.state is self.state:
-            await sleep_ms(0)
-        self.state = btn.state
 
 
 async def test_press_state_depending(button):
