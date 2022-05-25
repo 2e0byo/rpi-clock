@@ -19,9 +19,9 @@ volume = PWM(VOLUME_PIN, pi)  # , freq=800, max_duty=250)
 mute = Pin(MUTE_PIN, Pin.OUT, True)
 mute(True)
 
-up_button = Button(UP_BUTTON)
-down_button = Button(DOWN_BUTTON)
-enter_button = Button(ENTER_BUTTON)
+up_button = Button(UP_BUTTON, name="UpButton")
+down_button = Button(DOWN_BUTTON, name="DownButton")
+enter_button = Button(ENTER_BUTTON, name="EnterButton")
 
 light_sensor = LightSensor()
 
