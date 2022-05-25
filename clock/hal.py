@@ -1,5 +1,5 @@
-from .hardware import Button, Lcd, LightSensor, Pin, pi
 from .fadeable import PWM, Lamp
+from .hardware import Button, Lcd, LightSensor, Pin, pi
 
 BACKLIGHT_PIN = 6
 VOLUME_PIN = 26
