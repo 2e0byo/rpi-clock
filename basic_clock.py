@@ -1,6 +1,7 @@
 import asyncio
 from datetime import datetime, timedelta
 from functools import partial
+from logging import getLogger
 from time import monotonic, sleep, strftime
 
 from mopidy_asyncio_client import MopidyClient
@@ -8,6 +9,7 @@ from mopidy_asyncio_client import MopidyClient
 from rpi_clock.fadeable import SpiError
 from rpi_clock.hal import down_button, enter_button, lamp, lcd, mute, up_button, volume
 
+logger = getLogger(__name__)
 
 async def play():
     async with MopidyClient(host="localhost") as mopidy:
@@ -30,11 +32,11 @@ old = None
 
 async def end_alarm(button):
     await stop()
-    print("fade off lamp")
+    logger.debug("fade off lamp")
     asyncio.create_task(lamp.fade(duty=0))
-    print("restore button")
+    logger.debug("restore button")
     enter_button["press"] = old
-    print("fade off volume")
+    logger.debug("fade off volume")
     await volume.fade(duty=0, duration=3)
     mute(True)
 
@@ -53,12 +55,12 @@ async def alarm(when: datetime.time):
         if now > next_elapse:
             next_elapse += timedelta(days=1)
         gap = next_elapse - datetime.now()
-        print(gap)
+        logger.debug(gap)
         lcd[1] = "alarm: {}".format(next_elapse.strftime("%H:%M"))
         await asyncio.sleep(gap.seconds)
         old = enter_button["press"]
         enter_button["press"] = end_alarm
-        print("ring ring")
+        logger.debug("ring ring")
         lcd[1] = "ring ring"
         try:
             await lamp.fade(duty=500, duration=FADE_DURATION)
