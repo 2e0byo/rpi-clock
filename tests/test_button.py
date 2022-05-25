@@ -302,3 +302,60 @@ def test_dump(button):
     assert button["press"]
     assert button["release"]
     assert button["double"]
+
+
+class StateDependantCallback:
+    def __init__(self):
+        self.state = None
+
+    async def __call__(self, btn):
+        self.state = btn.state
+        while btn.state is self.state:
+            await sleep_ms(0)
+        self.state = btn.state
+
+
+async def test_press_state_depending(button):
+    callback = StateDependantCallback()
+    button["press"] = callback
+    assert not callback.state
+    assert not button.state
+    press(button)
+    await sleep_ms(1)
+    assert callback.state
+    release(button)
+    await sleep_ms(2)
+    assert not callback.state
+
+
+async def test_long_state_depending(button):
+    callback = StateDependantCallback()
+    button["long"] = callback
+    assert not callback.state
+    assert not button.state
+    press(button)
+    await sleep_ms(LONG_MS + 1)
+    assert callback.state
+    release(button)
+    await sleep_ms(2)
+    assert not button.state
+    assert not callback.state
+
+
+async def test_double_state_depending(button):
+    callback = StateDependantCallback()
+    button.suppress = True
+    button["double"] = callback
+    assert not callback.state
+    assert not button.state
+    press(button)
+    await sleep_ms(1)
+    release(button)
+    await sleep_ms(1)
+    press(button)
+    await sleep_ms(2)
+    assert callback.state
+    release(button)
+    await sleep_ms(2)
+    assert not button.state
+    assert not callback.state
