@@ -60,7 +60,8 @@ async def sleep_ms(duration):
 
 async def test_call_await(mocker, button):
     m = mocker.AsyncMock()
-    await button.call(m)
+    button["press"] = m
+    await button.call("press")
     await sleep_ms(1)
     m.assert_awaited_once()
 

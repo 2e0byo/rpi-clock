@@ -38,7 +38,10 @@ class Button(UserDict):
         self._long_ms = long_ms
         self.suppress = suppress
         self._loop = asyncio.get_event_loop()
-        self._long_timer = Timer(long_ms)
+        self._long_timer = Timer(
+            long_ms, lambda: asyncio.create_task(self.call("long"))
+        )
+
         self._double_timer = Timer(double_ms, self._doubleclick_timeout)
         self._double_pending = False
         self._double_ran = False
@@ -65,7 +68,7 @@ class Button(UserDict):
             or self.data["long"]
             and not self._long_timer.running
         ):
-            asyncio.create_task(self.call(self.data["release"]))
+            asyncio.create_task(self.call("release"))
 
     @property
     def double_ms(self):
@@ -95,8 +98,9 @@ class Button(UserDict):
         self._edge = level
         self._loop.call_soon_threadsafe(lambda: self._event.set())
 
-    async def call(self, fn):
-        x = fn(self)
+    async def call(self, hook: str):
+        self._logger.debug(f"Calling {hook}.")
+        x = self.data[hook](self)
         if asyncio.iscoroutine(x):
             x = await x
         return x
@@ -111,7 +115,7 @@ class Button(UserDict):
                 self._logger.debug("Got falling edge.")
                 self.state = True
                 if self.data["press"]:
-                    asyncio.create_task(self.call(self.data["press"]))
+                    asyncio.create_task(self.call("press"))
 
                 if self.data["long"]:
                     self._long_timer.trigger()
@@ -121,7 +125,7 @@ class Button(UserDict):
                         self._double_timer.cancel()
                         self._double_pending = False
                         self._double_ran = True
-                        asyncio.create_task(self.call(self.data["double"]))
+                        asyncio.create_task(self.call("double"))
                     else:
                         self._double_timer.trigger()
                         await asyncio.sleep(0)
@@ -140,9 +144,9 @@ class Button(UserDict):
                                 or (self.data["long"] and self._long_timer.running)
                             )
                         ):
-                            asyncio.create_task(self.call(self.data["release"]))
+                            asyncio.create_task(self.call("release"))
                     else:
-                        asyncio.create_task(self.call(self.data["release"]))
+                        asyncio.create_task(self.call("release"))
 
                     self._long_timer.cancel()
                     self._double_ran = False
@@ -155,8 +159,6 @@ class Button(UserDict):
         if key not in self.HOOKS:
             raise ValueError(f"Function {key} is not a valid hook")
         self.data[key] = fn
-        if key == "long":
-            self._long_timer.fn = fn
 
     def __getitem__(self, key: str):
         return self.data[key]
