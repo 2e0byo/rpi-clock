@@ -284,9 +284,10 @@ async def test_invalid_edge(button):
 async def test_pibutton(mocker):
     pi = mocker.Mock()
     pin = mocker.Mock()
-    button = PiButton(pi, pin, double_ms=DOUBLE_MS, long_ms=LONG_MS)
+    button = PiButton(pi, pin, double_ms=DOUBLE_MS, long_ms=LONG_MS, name="Buttonhole")
     assert button.double_ms == DOUBLE_MS
     assert button.long_ms == LONG_MS
+    assert button.name == "Buttonhole"
     pi.set_glitch_filter.assert_called_once()
     pi.set_pull_up_down.assert_called_once()
     pi.set_mode.assert_called_once()
@@ -360,3 +361,8 @@ async def test_double_state_depending(button):
     await sleep_ms(2)
     assert not button.state
     assert not callback.state
+
+
+def test_name():
+    b = Button(name="Buttonhole")
+    assert b.name == "Buttonhole"
