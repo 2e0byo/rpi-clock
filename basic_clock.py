@@ -4,32 +4,11 @@ from functools import partial
 from logging import getLogger
 from time import monotonic, sleep, strftime
 
-from mopidy_asyncio_client import MopidyClient
-
 from rpi_clock.fadeable import SpiError
 from rpi_clock.hal import down_button, enter_button, lamp, lcd, mute, up_button, volume
+from rpi_clock.mopidy import play, queue_playlist, stop
 
 logger = getLogger(__name__)
-
-
-async def queue_playlist(mopidy, name: str):
-    playlists = await mopidy.playlists.as_list()
-    playlist = next(x["uri"] for x in playlists if x["name"] == name)
-    tracks = await mopidy.playlists.lookup(playlist)
-    await mopidy.tracklist.add(uris=[x["uri"] for x in tracks["tracks"]])
-
-
-async def play():
-    async with MopidyClient(host="localhost") as mopidy:
-        await mopidy.tracklist.clear()
-        await queue_playlist(mopidy, "alarm")
-        await mopidy.tracklist.shuffle()
-        await mopidy.playback.play()
-
-
-async def stop():
-    async with MopidyClient(host="localhost") as mopidy:
-        await mopidy.playback.stop()
 
 
 old = None
