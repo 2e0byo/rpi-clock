@@ -53,6 +53,8 @@ async def alarm(when: datetime.time):
             asyncio.create_task(lcd.backlight.fade(percent_duty=1))
         except asyncio.CancelledError:
             pass
+        except Exception as e:
+            logger.error(e)
 
 
 MIN_BRIGHTNESS = 0.03
