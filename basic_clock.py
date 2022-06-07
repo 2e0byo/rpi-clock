@@ -1,12 +1,10 @@
 import asyncio
 from datetime import datetime, timedelta
-from functools import partial
 from logging import getLogger
-from time import monotonic, sleep, strftime
+from time import monotonic, strftime
 
-from rpi_clock.fadeable import SpiError
 from rpi_clock.hal import down_button, enter_button, lamp, lcd, mute, up_button, volume
-from rpi_clock.mopidy import play, queue_playlist, stop
+from rpi_clock.mopidy import play, stop
 
 logger = getLogger(__name__)
 
