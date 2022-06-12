@@ -1,5 +1,7 @@
 import asyncio
 
+from . import run
+
 
 class Timer:
     """Asyncio timer, api based loosely on Peter Hinch's Delay_ms."""
@@ -34,9 +36,7 @@ class Timer:
         return bool(self.task)
 
     async def _call(self):
-        x = self.fn()
-        if asyncio.iscoroutine(x):
-            await x
+        await run(self.fn)
 
     async def _trigger(self):
         await asyncio.sleep(self._duration)
