@@ -44,7 +44,7 @@ async def clock_loop():
 
 
 loop = asyncio.get_event_loop()
-loop.create_task(alarm(datetime(year=2022, month=2, day=28, hour=8, minute=15).time()))
+loop.create_task(alarm(datetime(year=2022, month=2, day=28, hour=8, minute=30).time()))
 # loop.create_task(alarm((datetime.now() + timedelta(seconds=3)).time()))
 loop.create_task(clock_loop())
 loop.run_forever()
