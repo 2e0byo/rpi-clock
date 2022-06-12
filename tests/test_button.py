@@ -4,6 +4,8 @@ from collections import namedtuple
 import pytest
 from rpi_clock.button import Button, PiButton
 
+from helpers import sleep_ms
+
 LONG_MS = 10
 DOUBLE_MS = 6
 
@@ -52,10 +54,6 @@ def release(button: Button):
         button._callback(0, Button.FALLING_EDGE, 0)
     else:
         button._callback(0, Button.RISING_EDGE, 0)
-
-
-async def sleep_ms(duration):
-    await asyncio.sleep(duration / 1_000)
 
 
 class StateDependantCallback:
