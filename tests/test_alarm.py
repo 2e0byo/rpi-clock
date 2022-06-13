@@ -24,6 +24,10 @@ async def test_set_alarm(alarm):
     alarm.callback.assert_called_once()
 
 
+def test_set_alarm_noloop(alarm):
+    alarm.target = (datetime.now() + timedelta(seconds=1)).time()
+
+
 async def test_alarm_no_callback(alarm):
     alarm.callback = None
     assert alarm.state == alarm.OFF
