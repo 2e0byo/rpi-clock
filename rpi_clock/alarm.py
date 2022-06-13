@@ -67,6 +67,7 @@ class Alarm:
         self._logger.debug(f"Alarm will go off in {(target-now)}")
         await asyncio.sleep((target - now).total_seconds())
         self._state = self.IN_PROGRESS
+        self._logger.debug(f"Ring ring!")
         if self.callback:
             await run(self.callback)
         if not self.oneshot:
