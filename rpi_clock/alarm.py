@@ -43,7 +43,7 @@ class Alarm:
         """Set target time."""
         self._waiter.cancel()
         self._target = val
-        self._waiter = asyncio.create_task(self._schedule())
+        self._waiter = asyncio.get_event_loop().create_task(self._schedule())
 
     @property
     def next_elapse(self) -> Optional[datetime]:
