@@ -46,3 +46,13 @@ async def test_set_alarm_oneshot(alarm):
     await asyncio.sleep(1.1)
     assert alarm.state == alarm.OFF
     alarm.callback.assert_called_once()
+
+
+async def test_next_elapse(alarm):
+    assert not alarm.next_elapse
+    elapse = datetime.now() - timedelta(hours=4)
+    alarm.target = elapse.time()
+    await sleep_ms(1)
+    assert alarm.state == alarm.WAITING
+    elapse += timedelta(days=1)
+    assert alarm.next_elapse == elapse
