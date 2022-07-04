@@ -122,8 +122,6 @@ def display_alarm():
     )
 
 
-alarm._target.callback = display_alarm
-alarm._state.callback = display_alarm
 alarm.target = time(hour=8, minute=0)
 display_alarm()
 
