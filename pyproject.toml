@@ -6,9 +6,11 @@ authors = ["John Maximilian <2e0byo@gmail.com>"]
 license = "MIT"
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = "^3.9,<3.11"
 pigpio = "^1.78"
 coloredlogs = "^15.0.1"
+rpi-hardware-pwm = "^0.1.4"
+gpiozero = "^1.6.2"
 
 [tool.poetry.dev-dependencies]
 pytest-sugar = "^0.9.4"
