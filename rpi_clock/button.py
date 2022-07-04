@@ -109,9 +109,13 @@ class Button(UserDict):
             return
         self.in_progress = True
         self._logger.debug(f"Calling {hook}.")
-        x = self.data[hook](self)
-        if asyncio.iscoroutine(x):
-            x = await x
+        try:
+            x = self.data[hook](self)
+            if asyncio.iscoroutine(x):
+                x = await x
+        except Exception as e:
+            # Don't die here, or the buttons will become unresponsive.
+            self._logger.error(e)
         self.in_progress = False
 
     async def _button_check_loop(self):
