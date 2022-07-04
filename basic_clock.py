@@ -1,8 +1,10 @@
 import asyncio
-from datetime import datetime, timedelta
+from datetime import datetime, time, timedelta
 from logging import getLogger
 from time import monotonic, strftime
 
+from rpi_clock import run
+from rpi_clock.alarm import Alarm
 from rpi_clock.hal import down_button, enter_button, lamp, lcd, mute, up_button, volume
 from rpi_clock.mopidy import play, stop
 
@@ -13,6 +15,7 @@ old = None
 
 
 async def end_alarm(button):
+    """Stop ringing."""
     await stop()
     logger.debug("fade off lamp")
     asyncio.create_task(lamp.fade(duty=0))
@@ -20,7 +23,8 @@ async def end_alarm(button):
     enter_button["press"] = old
     logger.debug("fade off volume")
     await volume.fade(duty=0, duration=3)
-    mute(True)
+    mute.on()
+    display_alarm()
 
 
 FADE_DURATION = 300
@@ -29,32 +33,24 @@ START_VOLUME = 4 / 50
 MAX_VOLUME = 11 / 50
 
 
-async def alarm(when: datetime.time):
+async def ring():
+    """Ring."""
     global old
-    while True:
-        now = datetime.now()
-        next_elapse = datetime.combine(now.date(), when)
-        if now > next_elapse:
-            next_elapse += timedelta(days=1)
-        gap = next_elapse - datetime.now()
-        logger.debug(gap)
-        lcd[1] = "alarm: {}".format(next_elapse.strftime("%H:%M"))
-        await asyncio.sleep(gap.seconds)
-        old = enter_button["press"]
-        enter_button["press"] = end_alarm
-        logger.debug("ring ring")
-        lcd[1] = "ring ring"
-        try:
-            await lamp.fade(duty=500, duration=FADE_DURATION)
-            await play()
-            mute(False)
-            volume.percent_duty = START_VOLUME
-            asyncio.create_task(volume.fade(percent_duty=MAX_VOLUME, duration=30))
-            asyncio.create_task(lcd.backlight.fade(percent_duty=1))
-        except asyncio.CancelledError:
-            pass
-        except Exception as e:
-            logger.error(e)
+    old = enter_button["press"]
+    enter_button["press"] = end_alarm
+    logger.debug("ring ring")
+    lcd[1] = "ring ring"
+    try:
+        await lamp.fade(duty=500, duration=FADE_DURATION)
+        await play()
+        mute.off()
+        volume.percent_duty = START_VOLUME
+        asyncio.create_task(volume.fade(percent_duty=MAX_VOLUME, duration=30))
+        asyncio.create_task(lcd.backlight.fade(percent_duty=1))
+    except asyncio.CancelledError:
+        pass
+    except Exception as e:
+        logger.error(e)
 
 
 MIN_BRIGHTNESS = 0.03
@@ -116,8 +112,22 @@ async def clock_loop():
         await asyncio.sleep(delay)
 
 
+alarm = Alarm(callback=ring)
+
+
+def display_alarm():
+    lcd[1] = "alarm {}: {}".format(
+        "Off" if alarm.state == alarm.OFF else "On",
+        alarm.target.strftime("%H:%M"),
+    )
+
+
+alarm._target.callback = display_alarm
+alarm._state.callback = display_alarm
+alarm.target = time(hour=8, minute=0)
+display_alarm()
+
+
 loop = asyncio.get_event_loop()
-loop.create_task(alarm(datetime(year=2022, month=2, day=28, hour=8, minute=0).time()))
-# loop.create_task(alarm((datetime.now() + timedelta(seconds=3)).time()))
 loop.create_task(clock_loop())
 loop.run_forever()
