@@ -1,34 +1,33 @@
 import asyncio
-from functools import partial
 
-import pigpio
+from gpiozero import LED
 
-from .button import PiButton
+from . import pinmap
+from .button import ZeroButton
 from .fadeable import PWM, Lamp
 from .lcd import Lcd
 from .pin import Pin
 
 loop = asyncio.get_event_loop()
-pi = pigpio.pi()
 
-BACKLIGHT_PIN = 6
-VOLUME_PIN = 26
-MUTE_PIN = 14
 
-UP_BUTTON = 16
-ENTER_BUTTON = 20
-DOWN_BUTTON = 21
-
-backlight = PWM(BACKLIGHT_PIN, pi)
+backlight = PWM(pinmap.BACKLIGHT_CHANNEL)
 lcd = Lcd(backlight=backlight)
-lamp = Lamp(pi)
+# lamp = Lamp(pi)
+from unittest.mock import MagicMock
 
-volume = PWM(VOLUME_PIN, pi)
-mute = Pin(pi, MUTE_PIN, Pin.OUT, inverted=True)
-mute(True)
+lamp = MagicMock()
 
-up_button = PiButton(pi, UP_BUTTON, suppress=True, name="UpButton", blocking=True)
-down_button = PiButton(pi, DOWN_BUTTON, suppress=True, name="DownButton", blocking=True)
-enter_button = PiButton(
-    pi, ENTER_BUTTON, suppress=True, name="EnterButton", blocking=True
+volume = PWM(pinmap.VOLUME_CHANNEL)
+mute = LED(pinmap.MUTE_PIN, active_high=False)
+mute.on()
+
+up_button = ZeroButton(
+    pinmap.UP_BUTTON_PIN, suppress=True, name="UpButton", blocking=True
+)
+down_button = ZeroButton(
+    pinmap.DOWN_BUTTON_PIN, suppress=True, name="DownButton", blocking=True
+)
+enter_button = ZeroButton(
+    pinmap.ENTER_BUTTON_PIN, suppress=True, name="EnterButton", blocking=True
 )

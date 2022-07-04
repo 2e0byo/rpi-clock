@@ -2,9 +2,9 @@ import asyncio
 import logging
 from abc import ABC, abstractmethod
 from time import monotonic, sleep
-from typing import Optional
 
-import pigpio
+from gpiozero import SPI
+from rpi_hardware_pwm import HardwarePWM
 
 
 class Fadeable(ABC):
@@ -96,27 +96,31 @@ class Fadeable(ABC):
 
 
 class PWM(Fadeable):
-    """A fadeable pwm output."""
+    """A fadeable pwm output using system pwm."""
 
     def __init__(
-        self, pin, pi, *args, freq: int = 10_000, max_duty: int = 50, **kwargs
+        self,
+        channel: int,
+        *args,
+        freq: int = 1_000_000,
+        **kwargs,
     ):
-        self.pin = pin
-        self.max_duty = max_duty
-        self.pi = pi
-        pi.set_mode(self.pin, 1)
-        pi.set_PWM_frequency(self.pin, freq)
-        pi.set_PWM_range(self.pin, self.max_duty)
+        self.channel = channel
+        self.pwm = HardwarePWM(channel, freq)
+        self.max_duty = 100
+        self.pwm.start(0)
         super().__init__(*args, **kwargs)
-        self._logger.debug(f"Started pwm on pin {self.pin}.")
+        self._logger.debug(f"Started pwm on channel {self.channel}.")
 
     @property
     def duty(self):
-        return self.pi.get_PWM_dutycycle(self.pin)
+        """Get the current raw duty cycle."""
+        return self.pwm._duty_cycle
 
     @duty.setter
     def duty(self, val: int):
-        self.pi.set_PWM_dutycycle(self.pin, val)
+        """Set the raw duty cycle."""
+        self.pwm.change_duty_cycle(val)
 
 
 class SpiError(Exception):

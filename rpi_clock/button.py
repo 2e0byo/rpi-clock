@@ -1,8 +1,11 @@
 import asyncio
 import logging
 from collections import UserDict
+from typing import Optional
 
 import pigpio
+from gpiozero import Device, Pin
+from gpiozero.pins import Factory
 
 from .timer import Timer
 
@@ -91,7 +94,7 @@ class Button(UserDict):
         self._long_ms = val
         self._long_timer.duration = val
 
-    def _callback(self, gpio: int, level: int, tick: int):
+    def _callback(self, level: int):
         """
         Callback for button events.
 
@@ -174,6 +177,8 @@ class Button(UserDict):
 
 
 class PiButton(Button):
+    """A button responding to events from PiGPIO."""
+
     def __init__(
         self,
         pi,
@@ -189,3 +194,31 @@ class PiButton(Button):
         pi.set_pull_up_down(pin, pigpio.PUD_DOWN if inverted else pigpio.PUD_UP)
         pi.set_glitch_filter(pin, debounce_ms)
         pi.callback(pin, pigpio.EITHER_EDGE, self._callback)
+
+
+class ZeroButton(Button):
+    """A button via a gpiozero `Pin` wrapper."""
+
+    def __init__(
+        self,
+        pin: int,
+        *args,
+        inverted: bool = False,
+        debounce_ms: int = 100,
+        pin_factory: Optional[Factory] = None,
+        **kwargs,
+    ):
+        """Initialise a new ZeroButton object with a `Pin`."""
+        kwargs["inverted"] = inverted
+        super().__init__(*args, **kwargs)
+        pin_factory = pin_factory or Device._default_pin_factory()
+        pin: Pin = pin_factory.pin(pin)
+        pin.function = "input"
+        pin.pull = "down" if inverted else "up"
+        pin.bounce = debounce_ms
+        pin.when_changed = self._callback
+        pin.edges = "both"
+
+    def _callback(self, ticks: int, state: int):
+        """Handle state changes."""
+        super()._callback(state)
