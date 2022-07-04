@@ -10,11 +10,17 @@ async def queue_playlist(mopidy, name: str):
 
 
 async def play():
-    async with MopidyClient(host="localhost") as mopidy:
-        await mopidy.tracklist.clear()
-        await queue_playlist(mopidy, "alarm")
-        await mopidy.tracklist.shuffle()
-        await mopidy.playback.play()
+    ATTEMPTS = 4
+    for _ in range(ATTEMPTS):
+        try:
+            async with MopidyClient(host="localhost") as mopidy:
+                await mopidy.tracklist.clear()
+                await queue_playlist(mopidy, "alarm")
+                await mopidy.tracklist.shuffle()
+                await mopidy.playback.play()
+            break
+        except Exception:
+            continue
 
 
 async def stop():
