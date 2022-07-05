@@ -208,7 +208,7 @@ class ZeroButton(Button):
         pin: int,
         *args,
         inverted: bool = False,
-        debounce_ms: int = 20,
+        debounce_ms: int = 0,
         pin_factory: Optional[Factory] = None,
         **kwargs,
     ):
@@ -219,7 +219,8 @@ class ZeroButton(Button):
         pin: Pin = pin_factory.pin(pin)
         pin.function = "input"
         pin.pull = "down" if inverted else "up"
-        pin.bounce = debounce_ms / 1_000
+        if debounce_ms:
+            pin.bounce = debounce_ms / 1_000
         pin.when_changed = self._callback
         pin.edges = "both"
 
