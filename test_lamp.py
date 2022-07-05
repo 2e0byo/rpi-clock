@@ -1,11 +1,11 @@
 import asyncio
-
-import pytest
+import logging
 
 import coloredlogs
-import logging
+import pytest
+
+from rpi_clock.fadeable import SpiControllerError
 from rpi_clock.hal import lamp
-from rpi_clock.fadeable import SpiError
 
 coloredlogs.install(level=logging.DEBUG)
 
@@ -25,7 +25,7 @@ async def test_reset(hardware):
         lamp.pi.bb_spi_xfer(lamp.cs, b"abcdefgasdf")
         try:
             lamp.duty = 112
-        except SpiError:
+        except SpiControllerError:
             stuffed_up = True
             break
     assert stuffed_up
