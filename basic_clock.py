@@ -44,7 +44,7 @@ async def ring():
         await lamp.fade(duty=500, duration=FADE_DURATION)
         await play()
         mute.off()
-        volume.percent_duty = START_VOLUME
+        await volume.set_percent_duty(START_VOLUME)
         asyncio.create_task(volume.fade(percent_duty=MAX_VOLUME, duration=30))
         asyncio.create_task(lcd.backlight.fade(percent_duty=1))
     except asyncio.CancelledError:
@@ -57,31 +57,31 @@ MIN_BRIGHTNESS = 0.03
 
 
 async def fade_up_down(button):
-    if lamp.duty > 0:
+    if await lamp.get_duty() > 0:
         delta = -0.005
     else:
         delta = 0.005
-        lamp.percent_duty = MIN_BRIGHTNESS
+        await lamp.set_percent_duty(MIN_BRIGHTNESS)
     while button.state:
-        print(f"{lamp.percent_duty:1.2}", end="\r", flush=True)
-        duty = lamp._convert_duty(lamp.percent_duty + delta)
-        await lamp.set_duty(duty)
+        current = await lamp.get_percent_duty()
+        print(f"{current:1.2}", end="\r", flush=True)
+        await lamp.set_percent_duty(current + delta)
         await asyncio.sleep(0.05)
-    if lamp.percent_duty < MIN_BRIGHTNESS:
-        lamp.percent_duty = 0
+    if await lamp.get_percent_duty() < MIN_BRIGHTNESS:
+        await lamp.set_percent_duty(0)
 
 
-def up(*args):
-    lamp.percent_duty += 0.02
+async def up(*args):
+    await lamp.set_percent_duty(await lamp.get_percent_duty() + 0.02)
 
 
-def down(*args):
-    lamp.percent_duty -= 0.02
+async def down(*args):
+    await lamp.set_percent_duty(await lamp.get_percent_duty() - 0.02)
 
 
 async def incr():
     while up_button.state:
-        lamp.duty += 1
+        await lamp.set_duty(await lamp.get_duty() + 1)
         # await asyncio.sleep(0.1)
 
 
@@ -91,7 +91,7 @@ async def incr():
 
 
 async def toggle_backlight(*args):
-    if lcd.backlight.percent_duty:
+    if await lcd.backlight.get_percent_duty():
         await lcd.backlight.fade(percent_duty=0)
     else:
         await lcd.backlight.fade(percent_duty=1)

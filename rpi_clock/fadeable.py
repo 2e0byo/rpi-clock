@@ -20,8 +20,8 @@ class Fadeable(ABC):
         name = kwargs.get("name", f"{__name__}-{len(self.instances)}")
         self.instances.append(name)
         self._logger = logging.getLogger(name)
-        self.duty = 0
         self._fade_task = None
+        asyncio.get_event_loop().create_task(self.set_duty(0))
 
     async def fade(
         self,
@@ -41,14 +41,13 @@ class Fadeable(ABC):
         if self._fade_task:
             self._fade_task.cancel()
 
+    @abstractmethod
     async def set_duty(self, val: int):
-        """
-        Set duty asynchronously.
+        """Set duty."""
 
-        Descendents *may* override this method to provide error handling or
-        yield during long asynchronous processes.
-        """
-        self.duty = val
+    @abstractmethod
+    async def get_duty(self):
+        """Get duty."""
 
     async def _fade(
         self,
@@ -61,7 +60,7 @@ class Fadeable(ABC):
             raise ValueError("One of duty or percent_duty needs to be supplied!")
 
         duty = duty if duty is not None else self._convert_duty(percent_duty)
-        current = self.duty
+        current = await self.get_duty()
         if duty == current:
             return
         step = 1 if current < duty else -1
@@ -83,16 +82,14 @@ class Fadeable(ABC):
             await asyncio.sleep(max(0, delay - elapsed))
         await self.set_duty(br)
 
-    @property
-    def percent_duty(self) -> float:
+    async def get_percent_duty(self) -> float:
         """Get current duty as a percentage."""
-        return self.duty / self.max_duty
+        return await self.get_duty() / self.max_duty
 
-    @percent_duty.setter
-    def percent_duty(self, val: float):
+    async def set_percent_duty(self, val: float):
         """Set current duty as a percentage."""
         val = self._convert_duty(val)
-        self.duty = val
+        await self.set_duty(val)
 
     def _convert_duty(self, val: float) -> int:
         if val < 0:
@@ -101,12 +98,6 @@ class Fadeable(ABC):
             return self.max_duty
         else:
             return round(val * self.max_duty)
-
-    @property
-    @abstractmethod
-    def duty(self):
-        """Get current duty."""
-        pass  # pragma: no cover
 
 
 class PWM(Fadeable):
@@ -127,13 +118,11 @@ class PWM(Fadeable):
         super().__init__(*args, **kwargs)
         self._logger.debug(f"Started pwm on channel {self.channel}.")
 
-    @property
-    def duty(self):
+    async def get_duty(self):
         """Get the current raw duty cycle."""
         return self.pwm._duty_cycle
 
-    @duty.setter
-    def duty(self, val: int):
+    async def set_duty(self, val: int):
         """Set the raw duty cycle."""
         self.pwm.change_duty_cycle(val)
 
@@ -177,10 +166,6 @@ class Lamp(Fadeable):
         self.cs.state = 1
         self.max_duty = 1023
         self._duty = None
-        try:
-            self.duty = 0
-        except SpiControllerError:
-            self._reset()
         super().__init__(*args, **kwargs)
         if rate_error:
             self._logger.error(rate_error)
@@ -197,8 +182,7 @@ class Lamp(Fadeable):
         """
         return self.spi.transfer(data)
 
-    @property
-    def duty(self):
+    async def get_duty(self):
         """Get the current duty."""
         return self._duty
 
@@ -208,16 +192,6 @@ class Lamp(Fadeable):
         sleep(self.SETTLE_TIME_S)
         return self._convert(self.spi_xfer([0] * 2))
 
-    @duty.setter
-    def duty(self, val: int):
-        duty = int(val).to_bytes(2, "little")
-        self.spi_xfer(b"s" + duty)
-        sleep(self.SETTLE_TIME_S)
-        resp = self._convert(self.spi_xfer([0] * 2))
-        if resp != val:
-            raise SpiControllerError(f"Failed to set lamp to {val}")
-        self._duty = val
-
     async def reset(self):
         """Reset the controller."""
         self._logger.debug("Resetting")
@@ -225,25 +199,20 @@ class Lamp(Fadeable):
         await asyncio.sleep(3)
         self.cs.state = 1
 
-    def _reset(self):
-        self.cs.state = 0
-        sleep(3)
-        self.cs.state = 1
-
     async def set_duty(self, val: int):
         """Set the controller to a given duty, retrying as required."""
         for attempt in range(self.SPI_ATTEMPTS):
-            try:
-                self.duty = val
+            self.spi_xfer(b"s" + int(val).to_bytes(2, "little"))
+            await asyncio.sleep(self.SETTLE_TIME_S)
+            resp = self._convert(self.spi_xfer([0] * 2))
+            if resp == val:
+                self._duty = val
                 if attempt > 1:
                     self._logger.debug(f"Set lamp to {val} after {attempt} attempts.")
                 return
-            except SpiControllerError:
-                if attempt == 4:
-                    await self.reset()
-                else:
-                    await asyncio.sleep(
-                        0.3 * attempt
-                    )  # backing off is enough most of the time.
-
+            if attempt == 4:
+                await self.reset()
+            else:
+                # backing off is enough most of the time.
+                await asyncio.sleep(0.3 * attempt)
         raise SpiControllerError(f"Failed to set lamp to {val}")
