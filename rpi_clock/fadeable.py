@@ -3,7 +3,9 @@ import logging
 from abc import ABC, abstractmethod
 from time import monotonic, sleep
 
-from gpiozero import SPI
+from gpiozero import SPI, Device
+from gpiozero.exc import SPIFixedRate
+from gpiozero.pins import Factory
 from rpi_hardware_pwm import HardwarePWM
 
 
@@ -14,6 +16,7 @@ class Fadeable(ABC):
     MAX_FADE_FREQ_HZ = 90  # no point updating faster than this.
 
     def __init__(self, *args, **kwargs):
+        """Initialise a new fadeable object."""
         name = kwargs.get("name", f"{__name__}-{len(self.instances)}")
         self.instances.append(name)
         self._logger = logging.getLogger(name)
@@ -27,16 +30,24 @@ class Fadeable(ABC):
         percent_duty: float = None,
         duration: int = 1,
     ):
+        """Fade from current state in a given time."""
         self.cancel_fade()
         self._fade_task = asyncio.create_task(self._fade(duty, percent_duty, duration))
         await self._fade_task
         self._fade_task = None
 
     def cancel_fade(self):
+        """Cancel a running fade."""
         if self._fade_task:
             self._fade_task.cancel()
 
     async def set_duty(self, val: int):
+        """
+        Set duty asynchronously.
+
+        Descendents *may* override this method to provide error handling or
+        yield during long asynchronous processes.
+        """
         self.duty = val
 
     async def _fade(
@@ -74,10 +85,12 @@ class Fadeable(ABC):
 
     @property
     def percent_duty(self) -> float:
+        """Get current duty as a percentage."""
         return self.duty / self.max_duty
 
     @percent_duty.setter
     def percent_duty(self, val: float):
+        """Set current duty as a percentage."""
         val = self._convert_duty(val)
         self.duty = val
 
@@ -92,6 +105,7 @@ class Fadeable(ABC):
     @property
     @abstractmethod
     def duty(self):
+        """Get current duty."""
         pass  # pragma: no cover
 
 
@@ -105,6 +119,7 @@ class PWM(Fadeable):
         freq: int = 1_000_000,
         **kwargs,
     ):
+        """Initialise a new pwm fadeable object."""
         self.channel = channel
         self.pwm = HardwarePWM(channel, freq)
         self.max_duty = 100
@@ -123,7 +138,7 @@ class PWM(Fadeable):
         self.pwm.change_duty_cycle(val)
 
 
-class SpiError(Exception):
+class SpiControllerError(Exception):
     """An error with spi communication."""
 
 
@@ -135,7 +150,6 @@ class Lamp(Fadeable):
 
     def __init__(
         self,
-        pi,
         *args,
         cs: int = 8,
         miso: int = 9,
@@ -143,82 +157,93 @@ class Lamp(Fadeable):
         sclk: int = 11,
         baud: int = 10_000,
         mode: int = 1,
+        pin_factory: Factory = None,
         **kwargs,
     ):
-        self.cs = cs
-        self.miso = miso
-        self.mosi = mosi
-        self.sclk = sclk
-        self.baud = baud
-        self.mode = mode
+        """Initialise a new `Lamp` object."""
+        pin_factory = pin_factory or Device._default_pin_factory()
+        spi = pin_factory.spi(
+            select_pin=cs, miso_pin=miso, mosi_pin=mosi, clock_pin=sclk
+        )
+        spi.clock_mode = mode
+        try:
+            spi.rate = baud
+            rate_error = None
+        except SPIFixedRate:
+            rate_error = "Unable to set spi baud rate: implementation is fixed-rate."
+        self.spi: SPI = spi
+        self.cs = pin_factory.pin(cs)
+        self.cs.function = "output"
+        self.cs.state = 1
         self.max_duty = 1023
-        self.pi = pi
-        self.spi_open()
         self._duty = None
+        try:
+            self.duty = 0
+        except SpiControllerError:
+            self._reset()
         super().__init__(*args, **kwargs)
+        if rate_error:
+            self._logger.error(rate_error)
 
     @staticmethod
     def _convert(b: bytes):
         return int.from_bytes(b, "little")
 
-    def spi_xfer(self, data):
-        return self.pi.bb_spi_xfer(self.cs, data)
+    def spi_xfer(self, data: bytes) -> bytes:
+        """
+        Transfer data to and from the controller over spi.
+
+        This method abstracts from a particular spi driver.
+        """
+        return self.spi.transfer(data)
 
     @property
     def duty(self):
+        """Get the current duty."""
         return self._duty
 
     def get_hardware_duty(self):
+        """Get the current duty directly from the controller."""
         self.spi_xfer(b"r")
         sleep(self.SETTLE_TIME_S)
-        return self._convert(self.spi_xfer([0] * 2)[1])
+        return self._convert(self.spi_xfer([0] * 2))
 
     @duty.setter
     def duty(self, val: int):
         duty = int(val).to_bytes(2, "little")
         self.spi_xfer(b"s" + duty)
         sleep(self.SETTLE_TIME_S)
-        resp = self._convert(self.spi_xfer([0] * 2)[1])
+        resp = self._convert(self.spi_xfer([0] * 2))
         if resp != val:
-            raise SpiError(f"Failed to set lamp to {val}")
+            raise SpiControllerError(f"Failed to set lamp to {val}")
         self._duty = val
 
-    def spi_open(self):
-        self.pi.bb_spi_open(
-            self.cs, self.miso, self.mosi, self.sclk, self.baud, self.mode
-        )
-
-    def spi_close(self):
-        self.pi.bb_spi_close(self.cs)
-
-    async def reset(self, long_=False):
+    async def reset(self):
+        """Reset the controller."""
         self._logger.debug("Resetting")
-        self.pi.write(self.cs, 0)
+        self.cs.state = 0
         await asyncio.sleep(3)
-        self.pi.write(self.cs, 1)
-        await asyncio.sleep(self.SETTLE_TIME_S)
-        self.spi_xfer([0] * 6)  # flush buffer: something isn't resetting properly...
+        self.cs.state = 1
+
+    def _reset(self):
+        self.cs.state = 0
+        sleep(3)
+        self.cs.state = 1
 
     async def set_duty(self, val: int):
+        """Set the controller to a given duty, retrying as required."""
         for attempt in range(self.SPI_ATTEMPTS):
             try:
                 self.duty = val
                 if attempt > 1:
                     self._logger.debug(f"Set lamp to {val} after {attempt} attempts.")
                 return
-            except SpiError:
+            except SpiControllerError:
                 if attempt == 4:
-                    # if attempt and not attempt % 4:
                     await self.reset()
                 else:
                     await asyncio.sleep(
                         0.3 * attempt
                     )  # backing off is enough most of the time.
 
-        raise SpiError(f"Failed to set lamp to {val}")
-
-    def __del__(self):
-        try:
-            self.spi_close()
-        except Exception:
-            pass
+        raise SpiControllerError(f"Failed to set lamp to {val}")

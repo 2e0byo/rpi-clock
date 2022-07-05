@@ -13,10 +13,8 @@ loop = asyncio.get_event_loop()
 
 backlight = PWM(pinmap.BACKLIGHT_CHANNEL)
 lcd = Lcd(backlight=backlight)
-# lamp = Lamp(pi)
-from unittest.mock import MagicMock
+lamp = Lamp()
 
-lamp = MagicMock()
 
 volume = PWM(pinmap.VOLUME_CHANNEL)
 mute = LED(pinmap.MUTE_PIN, active_high=False)
