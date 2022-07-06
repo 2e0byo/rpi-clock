@@ -2,6 +2,8 @@ import asyncio
 import logging
 from abc import ABC, abstractmethod
 from time import monotonic, sleep
+from typing import Optional
+from unittest.mock import Mock
 
 from gpiozero import SPI, Device
 from gpiozero.exc import SPIFixedRate
@@ -13,15 +15,17 @@ class Fadeable(ABC):
     """Base Class for a fadeable output."""
 
     instances = []
-    MAX_FADE_FREQ_HZ = 90  # no point updating faster than this.
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *, max_fade_freq_hz: int = 50, name: Optional[str] = None):
         """Initialise a new fadeable object."""
-        name = kwargs.get("name", f"{__name__}-{len(self.instances)}")
+        name = name or f"{__name__}-{len(self.instances)}"
         self.instances.append(name)
         self._logger = logging.getLogger(name)
+        self.max_fade_freq_hz = max_fade_freq_hz
         self._fade_task = None
-        asyncio.get_event_loop().create_task(self.set_duty(0))
+        self._duty = None
+        asyncio.get_event_loop().create_task(self._zero())
+        self._fade_lock = asyncio.Lock()
 
     async def fade(
         self,
@@ -31,23 +35,40 @@ class Fadeable(ABC):
         duration: int = 1,
     ):
         """Fade from current state in a given time."""
-        self.cancel_fade()
-        self._fade_task = asyncio.create_task(self._fade(duty, percent_duty, duration))
-        await self._fade_task
-        self._fade_task = None
+        async with self._fade_lock:
+            self.cancel_fade()
+            self._fade_task = asyncio.create_task(
+                self._fade(duty, percent_duty, duration)
+            )
+            await self._fade_task
+            self._fade_task = None
 
     def cancel_fade(self):
-        """Cancel a running fade."""
+        """Cancel a running fade.  Not guaranteed to succeed immediately."""
         if self._fade_task:
             self._fade_task.cancel()
 
-    @abstractmethod
+    async def _zero(self):
+        if self._duty is None:
+            await self.set_duty(0)
+
     async def set_duty(self, val: int):
         """Set duty."""
+        val = max(min(self.max_duty, val), 0)
+        await self.set_hardware_duty(val)
+        self._duty = val
 
-    @abstractmethod
     async def get_duty(self):
         """Get duty."""
+        return await self.get_hardware_duty()
+
+    @abstractmethod
+    async def set_hardware_duty(self, val: int):
+        """Set duty in hardware."""
+
+    @abstractmethod
+    async def get_hardware_duty(self):
+        """Get duty from hardware."""
 
     async def _fade(
         self,
@@ -59,14 +80,15 @@ class Fadeable(ABC):
         if duty is None and percent_duty is None:
             raise ValueError("One of duty or percent_duty needs to be supplied!")
 
-        duty = duty if duty is not None else self._convert_duty(percent_duty)
+        if duty is None:
+            duty = self._convert_duty(percent_duty)
         current = await self.get_duty()
         if duty == current:
             return
         step = 1 if current < duty else -1
         steps = abs(current - duty)
         freq = steps / duration
-        while freq > self.MAX_FADE_FREQ_HZ:
+        while freq > self.max_fade_freq_hz:
             steps //= 2
             step *= 2
             freq = steps / duration
@@ -100,6 +122,29 @@ class Fadeable(ABC):
             return round(val * self.max_duty)
 
 
+class MockFadeable(Fadeable):
+    """A fadeable with the output mocked."""
+
+    def __init__(self, *args, **kwargs):
+        """Initialise a new MockFadeable."""
+        self.max_duty = 100
+        self.set_duty_mock = Mock()
+        self.get_duty_mock = Mock()
+        # Generally when mocking we don't want anything funny happening with fading.
+        kwargs["max_fade_freq_hz"] = kwargs.get("max_fade_freq_hz", 1_000_000_000)
+        super().__init__(*args, **kwargs)
+        self.set_duty_mock = Mock()  # replace as set_duty called in `__init__()`.
+
+    async def set_hardware_duty(self, val: int):
+        """Set the mocked duty and call the mock."""
+        self.set_duty_mock(val)
+        self.get_duty_mock.return_value = val
+
+    async def get_hardware_duty(self) -> int:
+        """Get the mocked duty and call the mock."""
+        return self.get_duty_mock()
+
+
 class PWM(Fadeable):
     """A fadeable pwm output using system pwm."""
 
@@ -118,11 +163,11 @@ class PWM(Fadeable):
         super().__init__(*args, **kwargs)
         self._logger.debug(f"Started pwm on channel {self.channel}.")
 
-    async def get_duty(self):
+    async def get_hardware_duty(self):
         """Get the current raw duty cycle."""
         return self.pwm._duty_cycle
 
-    async def set_duty(self, val: int):
+    async def set_hardware_duty(self, val: int):
         """Set the raw duty cycle."""
         self.pwm.change_duty_cycle(val)
 
@@ -165,7 +210,7 @@ class Lamp(Fadeable):
         self.cs.function = "output"
         self.cs.state = 1
         self.max_duty = 1023
-        self._duty = None
+        self._hardware_lock = asyncio.Lock()
         super().__init__(*args, **kwargs)
         if rate_error:
             self._logger.error(rate_error)
@@ -186,11 +231,12 @@ class Lamp(Fadeable):
         """Get the current duty."""
         return self._duty
 
-    def get_hardware_duty(self):
+    async def get_hardware_duty(self):
         """Get the current duty directly from the controller."""
-        self.spi_xfer(b"r")
-        sleep(self.SETTLE_TIME_S)
-        return self._convert(self.spi_xfer([0] * 2))
+        async with self._hardware_lock:
+            self.spi_xfer(b"r")
+            sleep(self.SETTLE_TIME_S)
+            return self._convert(self.spi_xfer([0] * 2))
 
     async def reset(self):
         """Reset the controller."""
@@ -199,14 +245,14 @@ class Lamp(Fadeable):
         await asyncio.sleep(3)
         self.cs.state = 1
 
-    async def set_duty(self, val: int):
+    async def set_hardware_duty(self, val: int):
         """Set the controller to a given duty, retrying as required."""
         for attempt in range(self.SPI_ATTEMPTS):
-            self.spi_xfer(b"s" + int(val).to_bytes(2, "little"))
-            await asyncio.sleep(self.SETTLE_TIME_S)
-            resp = self._convert(self.spi_xfer([0] * 2))
+            async with self._hardware_lock:
+                self.spi_xfer(b"s" + int(val).to_bytes(2, "little"))
+                await asyncio.sleep(self.SETTLE_TIME_S)
+                resp = self._convert(self.spi_xfer([0] * 2))
             if resp == val:
-                self._duty = val
                 if attempt > 1:
                     self._logger.debug(f"Set lamp to {val} after {attempt} attempts.")
                 return
