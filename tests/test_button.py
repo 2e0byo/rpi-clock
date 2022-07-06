@@ -43,17 +43,17 @@ def not_called(button, fn):
 def press(button: Button):
     print("--pressing--")
     if button.inverted:
-        button._callback(0, Button.RISING_EDGE, 0)
+        button._callback(Button.RISING_EDGE)
     else:
-        button._callback(0, Button.FALLING_EDGE, 0)
+        button._callback(Button.FALLING_EDGE)
 
 
 def release(button: Button):
     print("--releasing--")
     if button.inverted:
-        button._callback(0, Button.FALLING_EDGE, 0)
+        button._callback(Button.FALLING_EDGE)
     else:
-        button._callback(0, Button.RISING_EDGE, 0)
+        button._callback(Button.RISING_EDGE)
 
 
 class StateDependantCallback:
@@ -311,7 +311,7 @@ def test_invalid_hook(button):
 
 
 async def test_invalid_edge(button):
-    button._callback(0, 99, 0)
+    button._callback(99)
     task = next(
         x for x in asyncio.all_tasks() if "_button_check_loop" in x.get_coro().__name__
     )
