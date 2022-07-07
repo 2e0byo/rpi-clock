@@ -24,7 +24,7 @@ class Fadeable(ABC):
         self.max_fade_freq_hz = max_fade_freq_hz
         self._fade_task = None
         self._duty = None
-        asyncio.get_event_loop().create_task(self._zero())
+        self._zero_task = asyncio.get_event_loop().create_task(self._zero())
         self._fade_lock = asyncio.Lock()
 
     async def fade(
