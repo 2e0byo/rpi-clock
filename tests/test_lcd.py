@@ -15,7 +15,7 @@ def test_restart_on_init(tmp_path, mocker):
 
 
 def test_write(lcd):
-    lcd.write("hello")
+    lcd._write("hello")
     with lcd.path.open() as f:
         assert f.read() == "hello"
 
