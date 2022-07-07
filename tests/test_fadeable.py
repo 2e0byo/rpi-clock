@@ -107,3 +107,13 @@ async def test_cancel_fade(mocker):
     f.cancel_fade()
     await asyncio.sleep(0.1)
     assert task.cancelled()
+
+
+async def test_pwm(mocker):
+    mocker.patch("rpi_clock.fadeable.HardwarePWM")
+    f = PWM(0)
+    f.pwm.start.assert_called_once_with(0)
+    await f.set_duty(56)
+    f.pwm.change_duty_cycle.assert_called_once_with(56)
+    f.pwm._duty_cycle = 56
+    assert await f.get_duty() == 56
