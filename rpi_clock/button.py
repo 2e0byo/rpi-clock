@@ -223,6 +223,7 @@ class ZeroButton(Button):
             pin.bounce = debounce_ms / 1_000
         pin.when_changed = self._callback
         pin.edges = "both"
+        self._pin = pin
 
     def _callback(self, ticks: int, state: int):
         """Handle state changes."""
