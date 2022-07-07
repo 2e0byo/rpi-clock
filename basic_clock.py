@@ -6,7 +6,7 @@ from time import monotonic, strftime
 from rpi_clock import run
 from rpi_clock.alarm import Alarm
 from rpi_clock.hal import down_button, enter_button, lamp, lcd, mute, up_button, volume
-from rpi_clock.mopidy import play, stop
+from rpi_clock.mopidy import mopidy_volume, play, stop
 
 logger = getLogger(__name__)
 
@@ -14,23 +14,10 @@ logger = getLogger(__name__)
 old = None
 
 
-async def end_alarm(button):
-    """Stop ringing."""
-    await stop()
-    logger.debug("fade off lamp")
-    asyncio.create_task(lamp.fade(duty=0))
-    logger.debug("restore button")
-    enter_button["press"] = old
-    logger.debug("fade off volume")
-    await volume.fade(duty=0, duration=3)
-    mute.on()
-    display_alarm()
-
-
 FADE_DURATION = 300
 # FADE_DURATION = 10
 START_VOLUME = 4 / 50
-MAX_VOLUME = 11 / 50
+MAX_VOLUME = 0.15
 
 
 async def ring():
@@ -43,14 +30,27 @@ async def ring():
     try:
         await lamp.fade(duty=500, duration=FADE_DURATION)
         await play()
+        await volume.set_percent_duty(MAX_VOLUME)
         mute.off()
-        await volume.set_percent_duty(START_VOLUME)
-        asyncio.create_task(volume.fade(percent_duty=MAX_VOLUME, duration=30))
+        asyncio.create_task(mopidy_volume.fade(percent_duty=0.78, duration=30))
+        # asyncio.create_task(volume.fade(percent_duty=MAX_VOLUME, duration=30))
         asyncio.create_task(lcd.backlight.fade(percent_duty=1))
     except asyncio.CancelledError:
         pass
     except Exception as e:
         logger.error(e)
+
+
+async def end_alarm(button):
+    """Stop ringing."""
+    lamp.cancel_fade()
+    mopidy_volume.cancel_fade()
+    asyncio.create_task(lamp.fade(duty=0))
+    enter_button["press"] = old
+    await mopidy_volume.fade(duty=0)
+    mute.on()
+    await stop()
+    display_alarm()
 
 
 MIN_BRIGHTNESS = 0.03
@@ -122,6 +122,8 @@ def display_alarm():
     )
 
 
+# FADE_DURATION = 10
+# alarm.target = (datetime.now() + timedelta(seconds=15)).time()
 alarm.target = time(hour=8, minute=0)
 display_alarm()
 
