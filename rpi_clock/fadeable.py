@@ -259,6 +259,5 @@ class Lamp(Fadeable):
             if attempt == 4:
                 await self.reset()
             else:
-                # backing off is enough most of the time.
-                await asyncio.sleep(0.3 * attempt)
+                await asyncio.sleep(self.SETTLE_TIME_S)
         raise SpiControllerError(f"Failed to set lamp to {val}")
