@@ -396,6 +396,22 @@ def test_name():
     assert b.name == "Buttonhole"
 
 
+async def test_dying_callback(mocker, button):
+    e = Exception("Failed")
+
+    def callback(*_):
+        raise e
+
+    button["press"] = callback
+    del button["release"]
+    del button["long"]
+    del button["double"]
+    button._logger = mocker.Mock()
+    press(button)
+    await sleep_ms(1)
+    button._logger.error.assert_called_with(e)
+
+
 async def test_zero_button():
     b = ZeroButton(1, pin_factory=MockFactory())
     b._pin.drive_low()
@@ -404,3 +420,8 @@ async def test_zero_button():
     b._pin.drive_high()
     await sleep_ms(2)
     assert not b.state
+
+
+def test_zero_button_debounce():
+    b = ZeroButton(1, pin_factory=MockFactory(), debounce_ms=100)
+    assert b._pin.bounce == 0.1
