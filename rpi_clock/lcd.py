@@ -1,4 +1,5 @@
 from pathlib import Path
+
 from .fadeable import Fadeable
 
 
@@ -30,34 +31,35 @@ class Lcd:
         self._specials = {}
         self._trans = str.maketrans({})
         self.restart()
-        self.cursor(False)
+        self.show_cursor(False)
 
     def restart(self):
-        self.write(self.RESTART)
+        """Restart lcd."""
+        self._write(self.RESTART)
 
-    def cursor(self, val: bool):
-        self.write(self.CURSOR if val else self.NOCURSOR)
+    def show_cursor(self, val: bool):
+        """Show or hide cursor."""
+        self._write(self.CURSOR if val else self.NOCURSOR)
 
     def goto(self, x: int, y: int):
-        self.write(self.GOTO.format(x, y))
+        """Move the cursor to x,y."""
+        self._write(self.GOTO.format(x, y))
 
-    def write(self, s: str):
+    def _write(self, s: str):
         with self.path.open("w") as f:
             f.write(s)
 
     def newchar(self, alias: str, char: bytearray):
+        """Create a new character with an alias."""
         index = len(self.specials.keys()) + 1 % 7
-        self.write(self.NEWCHAR.format(keys, "".join(hex(b)[2:] for b in char)))
+        self._write(self.NEWCHAR.format(keys, "".join(hex(b)[2:] for b in char)))
         self._specials[alias] = index.to_bytes(1, "big")
         self._trans = str.maketrans(self._specials)
 
     def __setitem__(self, line: int, msg: str):
+        """Set a line of the display to a string."""
         msg = f"{msg:{self.cols}.{self.cols}}"
         if self._buffer[line] != msg:
             self._buffer[line] = msg
             self.goto(0, line)
-            self.write(msg.translate(self._trans))
-
-    def __del__(self):
-        if self.backlight:
-            del self.backlight
+            self._write(msg.translate(self._trans))
