@@ -14,12 +14,6 @@ def test_restart_on_init(tmp_path, mocker):
     lcd.restart.assert_called_once()
 
 
-def test_write(lcd):
-    lcd._write("hello")
-    with lcd.path.open() as f:
-        assert f.read() == "hello"
-
-
 def test_goto(lcd):
     lcd.goto(1, 1)
     with lcd.path.open() as f:
@@ -33,6 +27,13 @@ def test_1line(lcd):
     lcd[0] = "this is a long line longer than 16 chars"
     with lcd.path.open() as f:
         assert f.read() == "this is a long l"
+
+
+def test_repeat(lcd):
+    lcd[0] = "short line"
+    now = lcd.path.stat().st_mtime
+    lcd[0] = "short line"
+    assert lcd.path.stat().st_mtime == now
 
 
 def test_2lines(lcd, mocker):
