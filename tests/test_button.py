@@ -2,7 +2,8 @@ import asyncio
 from collections import namedtuple
 
 import pytest
-from rpi_clock.button import Button, PiButton
+from gpiozero.pins.mock import MockFactory
+from rpi_clock.button import Button, PiButton, ZeroButton
 
 from helpers import sleep_ms
 
@@ -393,3 +394,13 @@ async def test_double_state_depending(button):
 def test_name():
     b = Button(name="Buttonhole")
     assert b.name == "Buttonhole"
+
+
+async def test_zero_button():
+    b = ZeroButton(1, pin_factory=MockFactory())
+    b._pin.drive_low()
+    await sleep_ms(2)
+    assert b.state
+    b._pin.drive_high()
+    await sleep_ms(2)
+    assert not b.state
