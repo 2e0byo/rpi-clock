@@ -1,8 +1,9 @@
 import asyncio
-from datetime import datetime, timedelta
+import json
+from datetime import datetime, time, timedelta
 
 import pytest
-from rpi_clock.alarm import Alarm
+from rpi_clock.alarm import Alarm, CachingAlarm
 
 from helpers import sleep_ms
 
@@ -60,3 +61,15 @@ async def test_next_elapse(alarm):
     assert alarm.state == alarm.WAITING
     elapse += timedelta(days=1)
     assert alarm.next_elapse == elapse
+
+
+async def test_caching_alarm(tmp_path):
+    alarmf = tmp_path / "alarm.json"
+    alarm = CachingAlarm(dbfile=alarmf)
+    assert alarm.target != time(8, 10)
+    alarm.target = time(8, 10)
+    assert alarmf.exists()
+    assert json.loads(alarmf.read_text())["value"] == "08:10:00"
+    del alarm
+    alarm = CachingAlarm(dbfile=alarmf)
+    assert alarm.target == time(8, 10)

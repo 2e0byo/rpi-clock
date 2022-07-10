@@ -89,6 +89,8 @@ class CachingAlarm(Alarm):
         """Initialise a new CachingAlarm."""
         self.dbfile = dbfile
         super().__init__(*args, **kwargs)
+        if target := self._load():
+            self.target = target
 
     def _load(self):
         try:
