@@ -10,6 +10,8 @@ from gpiozero.exc import SPIFixedRate
 from gpiozero.pins import Factory
 from rpi_hardware_pwm import HardwarePWM
 
+from .endpoint import Endpoint
+
 
 class Fadeable(ABC):
     """Base Class for a fadeable output."""
@@ -35,6 +37,9 @@ class Fadeable(ABC):
         duration: int = 1,
     ):
         """Fade from current state in a given time."""
+        if duty is None and percent_duty is None:
+            raise ValueError("One of percent_duty or duty must be supplied.")
+
         async with self._fade_lock:
             self.cancel_fade()
             self._fade_task = asyncio.create_task(
@@ -261,3 +266,48 @@ class Lamp(Fadeable):
             else:
                 await asyncio.sleep(self.SETTLE_TIME_S)
         raise SpiControllerError(f"Failed to set lamp to {val}")
+
+
+class FadeableEndpoint(Endpoint[Fadeable]):
+    """An endpoint for a Fadeable."""
+
+    def __init__(self, *args, **kwargs):
+        """Initialise a new endpoint at `prefix` for the given fadeable."""
+        super().__init__(*args, **kwargs)
+        self.router.get("/")(self.get_duty)
+        self.router.put("/")(self.set_duty)
+        self.router.put("/fade")(self.start_fade)
+        self.router.delete("/fade")(self.cancel_fade)
+
+    async def get_duty(self):
+        """Get duty."""
+        return {"value": await self.thing.get_duty()}
+
+    async def set_duty(
+        self, duty: Optional[int] = None, percent_duty: Optional[float] = None
+    ):
+        """Set duty."""
+        if duty is not None:
+            await self.thing.set_duty(duty)
+        elif percent_duty is not None:
+            await self.thing.set_percent_duty(percent_duty)
+        else:
+            raise ValueError("One of percent_duty or duty must be supplied.")
+        return await self.get_duty()
+
+    async def start_fade(
+        self,
+        duty: Optional[int] = None,
+        percent_duty: Optional[float] = None,
+        duration: Optional[int] = None,
+    ):
+        """Start fade."""
+        kwargs = dict(duty=duty, percent_duty=percent_duty, duration=duration)
+        kwargs = {k: v for k, v in kwargs.items() if v is not None}
+        asyncio.create_task(self.thing.fade(**kwargs))
+        return {"state": "success"}
+
+    async def cancel_fade(self):
+        """Cancel fade."""
+        self.thing.cancel_fade()
+        return {"state", "success"}

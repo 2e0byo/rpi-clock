@@ -12,6 +12,8 @@ coloredlogs = "^15.0.1"
 rpi-hardware-pwm = "^0.1.4"
 gpiozero = "^1.6.2"
 mopidy-asyncio-client = "^3.1.0"
+fastapi = "^0.78.0"
+uvicorn = "^0.18.2"
 
 [tool.poetry.dev-dependencies]
 pytest-sugar = "^0.9.4"

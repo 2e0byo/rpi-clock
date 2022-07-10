@@ -6,7 +6,6 @@ from . import pinmap
 from .button import ZeroButton
 from .fadeable import PWM, Lamp
 from .lcd import Lcd
-from .pin import Pin
 
 loop = asyncio.get_event_loop()
 
