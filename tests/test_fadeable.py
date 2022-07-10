@@ -118,6 +118,12 @@ async def test_cancel_fade(mocker):
     assert task.cancelled()
 
 
+async def test_no_duty():
+    f = MockFadeable()
+    with pytest.raises(ValueError):
+        await f.fade()
+
+
 async def test_pwm(mocker):
     mocker.patch("rpi_clock.fadeable.HardwarePWM")
     f = PWM(0)
