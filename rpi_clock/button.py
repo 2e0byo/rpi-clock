@@ -105,6 +105,7 @@ class Button(UserDict):
         self._loop.call_soon_threadsafe(lambda: self._event.set())
 
     async def call(self, hook: str):
+        """Call appropriate handler for given hook."""
         if self.blocking and self.in_progress:
             return
         self.in_progress = True
