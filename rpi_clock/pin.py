@@ -17,7 +17,7 @@ class Pin:
         pin: int,
         mode: int,
         inverted: bool = False,
-        name: str = None,
+        name: str| None = None,
     ):
         self.pi = pi
         self.pin = pin

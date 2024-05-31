@@ -18,6 +18,7 @@ class Fadeable(ABC):
     """Base Class for a fadeable output."""
 
     instances = []
+    max_duty: int
 
     def __init__(self, *, max_fade_freq_hz: int = 50, name: Optional[str] = None):
         """Initialise a new fadeable object."""
@@ -33,8 +34,8 @@ class Fadeable(ABC):
     async def fade(
         self,
         *,
-        duty: int = None,
-        percent_duty: float = None,
+        duty: int | None = None,
+        percent_duty: float | None = None,
         duration: int = 1,
     ):
         """Fade from current state in a given time."""
@@ -64,7 +65,7 @@ class Fadeable(ABC):
         await self.set_hardware_duty(val)
         self._duty = val
 
-    async def get_duty(self):
+    async def get_duty(self) -> int:
         """Get duty."""
         return await self.get_hardware_duty()
 
@@ -73,13 +74,13 @@ class Fadeable(ABC):
         """Set duty in hardware."""
 
     @abstractmethod
-    async def get_hardware_duty(self):
+    async def get_hardware_duty(self) -> int:
         """Get duty from hardware."""
 
     async def _fade(
         self,
-        duty: int = None,
-        percent_duty: float = None,
+        duty: int | None = None,
+        percent_duty: float | None = None,
         duration: int = 1,
     ):
 
@@ -87,6 +88,7 @@ class Fadeable(ABC):
             raise ValueError("One of duty or percent_duty needs to be supplied!")
 
         if duty is None:
+            assert percent_duty
             duty = self._convert_duty(percent_duty)
         current = await self.get_duty()
         if duty == current:
