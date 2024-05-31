@@ -1,14 +1,14 @@
 import asyncio
 from datetime import time, timedelta
-from logging import getLogger
 from pathlib import Path
 from time import monotonic, strftime
 
+from structlog import get_logger
 from .alarm import CachingAlarm
 from .hal import down_button, enter_button, lamp, lcd, mute, up_button, volume
 from .mopidy import mopidy_volume, play, stop
 
-logger = getLogger(__name__)
+logger = get_logger()
 
 
 old = None

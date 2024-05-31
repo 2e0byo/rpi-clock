@@ -8,12 +8,12 @@ license = "MIT"
 [tool.poetry.dependencies]
 python = "^3.9,<3.13"
 pigpio = "^1.78"
-coloredlogs = "^15.0.1"
 rpi-hardware-pwm = "^0.1.4"
 gpiozero = "^2.0.1"
 mopidy-asyncio-client = "^3.1.0"
 fastapi = "^0.111.0"
 uvicorn = "^0.30.0"
+structlog = "^24.2.0"
 
 
 [tool.poetry.group.dev.dependencies]

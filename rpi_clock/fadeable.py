@@ -1,5 +1,4 @@
 import asyncio
-import logging
 from abc import ABC, abstractmethod
 from time import monotonic, sleep
 from typing import Optional
@@ -9,9 +8,11 @@ from gpiozero import SPI, Device
 from gpiozero.exc import SPIFixedRate
 from gpiozero.pins import Factory
 from rpi_hardware_pwm import HardwarePWM
+from structlog import get_logger
 
 from .endpoint import Endpoint
 
+logger = get_logger()
 
 class Fadeable(ABC):
     """Base Class for a fadeable output."""
@@ -22,7 +23,7 @@ class Fadeable(ABC):
         """Initialise a new fadeable object."""
         name = name or f"{__name__}-{len(self.instances)}"
         self.instances.append(name)
-        self._logger = logging.getLogger(name)
+        self._logger = logger.bind(name=name)
         self.max_fade_freq_hz = max_fade_freq_hz
         self._fade_task = None
         self._duty = None

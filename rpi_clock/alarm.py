@@ -1,13 +1,15 @@
 import asyncio
 import json
 from datetime import datetime, time, timedelta
-from logging import getLogger
 from pathlib import Path
-from typing import Optional
+from typing import Callable, Optional
+
+from structlog import get_logger
 
 from . import run
 from .endpoint import Endpoint
 
+logger = get_logger()
 
 class Alarm:
     """An alarm."""
@@ -18,7 +20,7 @@ class Alarm:
     instances = 0
 
     def __init__(
-        self, callback: Optional[callable] = None, name: Optional[str] = None
+        self, callback: Optional[Callable] = None, name: Optional[str] = None
     ) -> None:
         """Set up the alarm."""
         self.callback = callback
@@ -29,7 +31,7 @@ class Alarm:
         self._waiter = asyncio.get_event_loop().create_task(self._schedule())
         name = name or f"Alarm-{self.instances}"
         self.instances += 1
-        self._logger = getLogger(name)
+        self._logger = logger.bind(name=name)
         self._next_elapse: Optional[datetime] = None
         self.adjust_alarm = lambda val: val
 
