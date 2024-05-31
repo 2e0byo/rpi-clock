@@ -6,22 +6,22 @@ authors = ["John Maximilian <2e0byo@gmail.com>"]
 license = "MIT"
 
 [tool.poetry.dependencies]
-python = "^3.9,<3.11"
+python = "^3.9,<3.13"
 pigpio = "^1.78"
 coloredlogs = "^15.0.1"
 rpi-hardware-pwm = "^0.1.4"
-gpiozero = "^1.6.2"
+gpiozero = "^2.0.1"
 mopidy-asyncio-client = "^3.1.0"
-fastapi = "^0.78.0"
-uvicorn = "^0.18.2"
+fastapi = "^0.111.0"
+uvicorn = "^0.30.0"
 
-[tool.poetry.dev-dependencies]
-pytest-sugar = "^0.9.4"
-pytest-asyncio = "^0.18.1"
-pytest-mock = "^3.7.0"
-pytest-coverage = "^0.0"
-pytest-repeat = "^0.9.1"
-flaky = "^3.7.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest-sugar = "^1.0.0"
+pytest-asyncio = "^0.23.7"
+pytest-mock = "^3.14.0"
+pytest-repeat = "^0.9.3"
+flaky = "^3.8.1"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
