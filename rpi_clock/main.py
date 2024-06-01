@@ -1,16 +1,22 @@
 from typing import Never
 import uvicorn
+import typer
 
-from .api import app
+from . import api
 from .clock import loop
 
+app = typer.Typer()
 
-async def start_server() -> Never:
-    config = uvicorn.Config("main:app", host="0.0.0.0", port=8000)
+
+async def start_server(config: uvicorn.Config) -> Never:
     server = uvicorn.Server(config)
     await server.serve()
 
-def main() -> None:
-    loop.create_task(start_server())
+
+@app.command(help="Run clock")
+def main(port: int=8000) -> None:
+    config = uvicorn.Config(api.app, host="0.0.0.0", port=port)
+    loop.create_task(start_server(config))
     loop.run_forever()
+
 
