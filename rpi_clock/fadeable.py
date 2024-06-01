@@ -7,6 +7,7 @@ from unittest.mock import Mock
 from gpiozero import SPI, Device
 from gpiozero.exc import SPIFixedRate
 from gpiozero.pins import Factory
+from gpiozero.pins.native import NativeFactory
 from rpi_hardware_pwm import HardwarePWM
 from structlog import get_logger
 
@@ -217,7 +218,7 @@ class Lamp(Fadeable):
         except SPIFixedRate:
             rate_error = "Unable to set spi baud rate: implementation is fixed-rate."
         self.spi: SPI = spi
-        self.cs = pin_factory.pin(cs)
+        self.cs = NativeFactory().pin(cs)
         self.cs.function = "output"
         self.cs.state = 1
         self.max_duty = 1023
