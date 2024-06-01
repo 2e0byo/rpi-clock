@@ -203,6 +203,9 @@ class Lamp(Fadeable):
         **kwargs,
     ):
         """Initialise a new `Lamp` object."""
+        # This is bad, but the suggested 'better' alternative is to call a
+        # classmethod which *mututes the class state* with the result of this
+        # call, and then look up the resulting attribute. No comment.
         pin_factory = pin_factory or Device._default_pin_factory()
         spi = pin_factory.spi(
             select_pin=cs, miso_pin=miso, mosi_pin=mosi, clock_pin=sclk
