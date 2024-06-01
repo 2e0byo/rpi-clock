@@ -24,7 +24,7 @@ class Lcd:
         lines: int = 2,
         cols: int = 16,
         path: Path = Path("/dev/lcd"),
-        backlight: Fadeable = None,
+        backlight: Fadeable | None= None,
     ):
         self.path = Path(path)
         self.lines = lines
