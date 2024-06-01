@@ -10,6 +10,7 @@ class Lcd:
     CLEAR = "\f"
     HOME = "\x1b[H"
     BLINK = "\x1b[LB"
+    NOBLINK = "\x1b[Lb"
     GOTOX = "\x1b[Lx"
     GOTOY = "\x1b[Ly"
     GOTO = "\x1b[Lx{:03}y{:03};"
@@ -33,15 +34,21 @@ class Lcd:
         self._specials = {}
         self._trans = str.maketrans({})
         self.restart()
-        self.show_cursor(False)
 
     def restart(self):
         """Restart lcd."""
         self._write(self.RESTART)
+        for line in range(self.lines):
+            self.__setitem__(line, "")
+        self.cursor(False)
+        self.blink(False)
 
-    def show_cursor(self, val: bool):
+    def cursor(self, val: bool):
         """Show or hide cursor."""
         self._write(self.CURSOR if val else self.NOCURSOR)
+
+    def blink(self, val: bool):
+        self._write(self.BLINK if val else self.NOBLINK)
 
     def goto(self, x: int, y: int):
         """Move the cursor to x,y."""
