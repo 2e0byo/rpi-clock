@@ -6,7 +6,7 @@ import pigpio
 from gpiozero import Device, Pin
 from gpiozero.pins import Factory
 
-from stuctlog import get_logger
+from structlog import get_logger
 
 from .timer import Timer
 
