@@ -1,6 +1,8 @@
 from pathlib import Path
+from structlog import get_logger
 
 from .fadeable import Fadeable
+logger = get_logger()
 
 
 class Lcd:
@@ -46,8 +48,8 @@ class Lcd:
         self._write(self.GOTO.format(x, y))
 
     def _write(self, s: str):
-        with self.path.open("w") as f:
-            f.write(s)
+        logger.debug("Writing to lcd", data=s.encode())
+        self.path.write_text(s)
 
     def newchar(self, alias: str, char: bytearray):
         """Create a new character with an alias."""
@@ -60,6 +62,8 @@ class Lcd:
         """Set a line of the display to a string."""
         msg = f"{msg:{self.cols}.{self.cols}}"
         if self._buffer[line] != msg:
+            msg = msg.translate(self._trans)
+            logger.debug("Writing line to lcd", line=line, msg=msg)
             self._buffer[line] = msg
             self.goto(0, line)
-            self._write(msg.translate(self._trans))
+            self._write(msg)
