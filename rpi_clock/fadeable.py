@@ -305,7 +305,7 @@ class FadeableEndpoint(Endpoint[Fadeable]):
         self,
         duty: Optional[int] = None,
         percent_duty: Optional[float] = None,
-        duration: Optional[int] = None,
+        duration: Optional[float] = None,
     ):
         """Start fade."""
         kwargs = dict(duty=duty, percent_duty=percent_duty, duration=duration)
