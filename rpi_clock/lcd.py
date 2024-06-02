@@ -38,8 +38,6 @@ class Lcd:
     def restart(self):
         """Restart lcd."""
         self._write(self.RESTART)
-        for line in range(self.lines):
-            self.__setitem__(line, "")
         self.cursor(False)
         self.blink(False)
 
