@@ -53,4 +53,4 @@ async def stop():
         await mopidy.playback.stop()
 
 
-mopidy_volume = MopidyVolume(host="localhost")
+mopidy_volume = MopidyVolume(host="localhost", max_fade_freq_hz=4)
