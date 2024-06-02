@@ -3,9 +3,13 @@ from typing import Callable, TypeVar
 
 T = TypeVar("T")
 
-async def run(fn: Callable[[], T]) -> T:
+async def run(fn: Callable[[], T] | None) -> T | None:
     """Run a fn or coro."""
-    x = fn()
+    if fn:
+        x = fn()
+        if asyncio.iscoroutine(x):
+            x = await x
+        return x
     if asyncio.iscoroutine(x):
         x = await x
     return x
