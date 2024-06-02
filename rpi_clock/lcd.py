@@ -21,16 +21,16 @@ class Lcd:
 
     def __init__(
         self,
-        lines: int = 2,
+        rows: int = 2,
         cols: int = 16,
         path: Path = Path("/dev/lcd"),
         backlight: Fadeable | None= None,
     ):
         self.path = Path(path)
-        self.lines = lines
+        self.rows = rows
         self.cols = cols
         self.backlight = backlight
-        self._buffer = [""] * lines
+        self._buffer = [""] * rows
         self._specials = {}
         self._trans = str.maketrans({})
         self.restart()
