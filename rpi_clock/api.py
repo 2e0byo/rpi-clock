@@ -29,7 +29,7 @@ class PinEndpoint(Endpoint[LED]):
         return {"value": bool(self.thing.value)}
 
     def set_state(self, state: bool):
-        """Set the pin state."""
+        """Set the thing state."""
         self.thing.value = state
         return self.get_state()
 
