@@ -10,12 +10,12 @@ from .lcd import Lcd
 loop = asyncio.get_event_loop()
 
 
-backlight = PWM(pinmap.BACKLIGHT_CHANNEL)
+backlight = PWM(pinmap.BACKLIGHT_CHANNEL, name="backlight")
 lcd = Lcd(backlight=backlight)
-lamp = Lamp()
+lamp = Lamp(name="lamp")
 
 
-volume = PWM(pinmap.VOLUME_CHANNEL)
+volume = PWM(pinmap.VOLUME_CHANNEL, name="backlight")
 mute = LED(pinmap.MUTE_PIN, active_high=False)
 mute.on()
 
