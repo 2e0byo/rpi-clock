@@ -58,7 +58,7 @@ class Lcd:
 
     def newchar(self, alias: str, char: bytearray):
         """Create a new character with an alias."""
-        index = len(self.specials.keys()) + 1 % 7
+        index = len(self._specials) + 1 % 7
         self._write(self.NEWCHAR.format(keys, "".join(hex(b)[2:] for b in char)))
         self._specials[alias] = index.to_bytes(1, "big")
         self._trans = str.maketrans(self._specials)
