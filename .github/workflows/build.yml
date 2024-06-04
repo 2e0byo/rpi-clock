@@ -1,0 +1,34 @@
+name: build
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - '*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Log in to docker
+        uses: docker/login-action@v2
+        with:
+          username: 2e0byo # hardly secret...
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Expose GitHub Runtime for cache
+        uses: crazy-max/ghaction-github-runtime@v2
+
+      - name: Set up QEMU for emulated building
+        uses: docker/setup-qemu-action@v2
+
+      - uses: actions/checkout@v4
+
+      - name: Create builder
+        run: |
+          docker buildx create --name builder --driver=docker-container --driver-opt=image=moby/buildkit:master --use
+          docker buildx inspect --bootstrap builder
+
+      - name: Build and push image
+        run: |
+          VERSION=${{ github.ref_name }} docker buildx bake --push
