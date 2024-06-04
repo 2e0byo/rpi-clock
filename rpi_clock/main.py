@@ -20,3 +20,5 @@ def main(port: int=8000) -> None:
     loop.run_forever()
 
 
+if __name__ == "__main__":
+    app()
