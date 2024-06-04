@@ -323,17 +323,20 @@ class Lamp(CachingFadeable):
                 self.spi_cmd(f"s{val}".encode())
                 await asyncio.sleep(self.SETTLE_TIME_S)
                 raw = self.spi_cmd(b" " * 4)
-                resp = int(raw)
-            if resp != val:
-                self._logger.debug(f"Got {resp} for {val} ({bytes(raw)})")
-            if resp == val:
-                if attempt > 1:
-                    self._logger.debug(f"Set lamp to {val} after {attempt} attempts.")
-                return
-            if attempt == 4:
-                await self.reset()
-            else:
-                await asyncio.sleep(self.SETTLE_TIME_S)
+                try:
+                    resp = int(raw)
+                    if resp != val:
+                        self._logger.debug(f"Got {resp} for {val} ({bytes(raw)})")
+                    if resp == val:
+                        if attempt > 1:
+                            self._logger.debug(f"Set lamp to {val} after {attempt} attempts.")
+                        return
+                    if attempt == 4:
+                        await self.reset()
+                    else:
+                        await asyncio.sleep(self.SETTLE_TIME_S)
+                except ValueError:
+                    await self.reset()
         raise SpiControllerError(f"Failed to set lamp to {val}")
 
 
