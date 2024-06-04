@@ -38,7 +38,7 @@ class Fadeable(ABC):
         self._logger = logger.bind(name=name)
         self.max_fade_freq_hz = max_fade_freq_hz
         self._fade_task = None
-        self._duty = None
+        self._duty = 0
         self._zero_task = asyncio.get_event_loop().create_task(self._zero())
         self._fade_lock = asyncio.Lock()
         self._max_duty = max_duty
@@ -82,8 +82,8 @@ class Fadeable(ABC):
             self._fade_task.cancel()
 
     async def _zero(self):
-        if self._duty is None:
-            await self.set_duty(0)
+        self._logger.info("Zeroing")
+        await self.set_duty(0)
 
     def _ceil(self, duty) -> int:
         return min(self.max_duty, duty)
