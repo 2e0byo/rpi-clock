@@ -1,5 +1,4 @@
 import asyncio
-import logging
 from collections import UserDict
 from typing import Optional
 
@@ -7,8 +6,11 @@ import pigpio
 from gpiozero import Device, Pin
 from gpiozero.pins import Factory
 
+from structlog import get_logger
+
 from .timer import Timer
 
+logger = get_logger()
 
 class Button(UserDict):
     """A button, api loosely inspired by Peter Hinch's micropython `Pushbutton`.
@@ -53,7 +55,7 @@ class Button(UserDict):
         self._loop.create_task(self._button_check_loop())
         self.name = name or f"Button-{len(self.instances)}"
         self.instances.append(self.name)
-        self._logger = logging.getLogger(self.name)
+        self._logger = logger.bind(name=self.name)
         self.blocking = blocking
         self.in_progress = False
 
@@ -114,9 +116,9 @@ class Button(UserDict):
             x = self.data[hook](self)
             if asyncio.iscoroutine(x):
                 x = await x
-        except Exception as e:
+        except Exception:
             # Don't die here, or the buttons will become unresponsive.
-            self._logger.error(e)
+            self._logger.exception("Failed to call handler")
         self.in_progress = False
 
     async def _button_check_loop(self):

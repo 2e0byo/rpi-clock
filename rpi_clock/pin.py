@@ -1,5 +1,6 @@
-from logging import getLogger
+from structlog import get_logger
 
+logger = get_logger()
 
 class PinError(Exception):
     pass
@@ -16,7 +17,7 @@ class Pin:
         pin: int,
         mode: int,
         inverted: bool = False,
-        name: str = None,
+        name: str| None = None,
     ):
         self.pi = pi
         self.pin = pin
@@ -25,7 +26,7 @@ class Pin:
         pi.set_mode(pin, mode)
         name = name or f"{__name__}-{len(self.instances)}"
         self.instances.append(name)
-        self._logger = getLogger(name)
+        self._logger = logger.bind(name=name)
         self._logger.debug(f"Set pin{pin} to mode {mode}.")
 
     def __call__(self, val=None):

@@ -1,37 +1,50 @@
 import asyncio
 import json
 from datetime import datetime, time, timedelta
-from logging import getLogger
 from pathlib import Path
-from typing import Optional
+from structlog import get_logger
+from typing import Coroutine, Optional, Union, cast, Callable
 
 from . import run
 from .endpoint import Endpoint
+from .reactive import Watched
 
+logger = get_logger()
 
 class Alarm:
     """An alarm."""
 
-    OFF = 0
-    WAITING = 1
-    IN_PROGRESS = 2
+    OFF = "OFF"
+    WAITING = "WAITING"
+    IN_PROGRESS = "IN PROGRESS"
     instances = 0
+    TICK_S = 10
 
     def __init__(
-        self, callback: Optional[callable] = None, name: Optional[str] = None
+        self,
+        *,
+        callback: Callable,
+        cancel_callback: Optional[Callable] = None,
+        name: Optional[str] = None,
     ) -> None:
         """Set up the alarm."""
         self.callback = callback
-        self._target: Optional[time] = None
+        self.cancel_callback = cancel_callback
+        self._saved_target: Optional[time] = None
+        self._target: Union[time, None, bool] = None
         self._real_target: Optional[time] = None
         self.oneshot = False
+        self._saved_oneshot = True
         self._state = self.OFF
         self._waiter = asyncio.get_event_loop().create_task(self._schedule())
-        name = name or f"Alarm-{self.instances}"
+        self.name = name or f"Alarm-{self.instances}"
         self.instances += 1
-        self._logger = getLogger(name)
-        self._next_elapse: Optional[datetime] = None
+        self._logger = logger.bind(name=self.name)
+        self._next_elapse: Watched[Optional[datetime]] = Watched()
         self.adjust_alarm = lambda val: val
+        self._enabled = True
+        self._snoozing = False
+        self._cancel_event = asyncio.Event()
 
     @property
     def state(self):
@@ -41,45 +54,129 @@ class Alarm:
     @property
     def target(self) -> Optional[time]:
         """Get target time."""
-        return self._target
+        if self._target is True:
+            return datetime.now().time()
+        else:
+            return cast(Optional[time], self._target)
 
     @target.setter
-    def target(self, val: time):
+    def target(self, val: Union[time, None, bool]):
         """Set target time."""
-        self._waiter.cancel()
+        self._stop_waiting()
         self._target = val
-        self._waiter = asyncio.get_event_loop().create_task(self._schedule())
+        self._start_waiting()
 
     @property
     def next_elapse(self) -> Optional[datetime]:
         """Get next elapse point."""
         if self.state == self.OFF:
             return None
-        return self._next_elapse
+        return self._next_elapse.value
+
+    @property
+    def enabled(self):
+        """Get current enabled state."""
+        return self._enabled
+
+    @enabled.setter
+    def enabled(self, val: bool):
+        self._enabled = val
+        if not val:
+            self._stop_waiting()
+        else:
+            if self._state == self.OFF:
+                self._start_waiting()
+
+    @property
+    def snoozing(self) -> bool:
+        """Get whether alarm snoozing."""
+        return self._snoozing
+
+    def cancel(self) -> bool:
+        """Cancel running alarm."""
+        if self.state != self.IN_PROGRESS:
+            self._logger.debug(f"No need to cancel, currently {self.state}")
+            return False
+        else:
+            self._logger.debug("cancel")
+            self._cancel_event.set()
+            return True
+
+    def _stop_waiting(self):
+        async def _cancel(waiter):
+            await asyncio.sleep(1)
+            waiter.cancel()
+
+        if self._waiter:
+            self.cancel()
+            if asyncio.get_event_loop().is_running():
+                # run in asyncio thread to allow cleanup
+                asyncio.create_task(_cancel(self._waiter))
+            else:
+                self._waiter.cancel()
+        self._state = self.OFF
+
+    def _start_waiting(self):
+        if self._enabled:
+            self._waiter = asyncio.get_event_loop().create_task(self._schedule())
+
+    def snooze(self, duration: timedelta):
+        """Snooze for a given duration."""
+        if not self._snoozing:
+            self._saved_target = self.target
+            self._saved_oneshot = self.oneshot
+        self.oneshot = True
+        if duration:
+            self.target = (datetime.now() + duration).time()
+        else:
+            self.target = True
+        self._waiter.add_done_callback(self._restore_target)
+        self._snoozing = True
+        self.cancel()
+
+    def trigger(self):
+        """Trigger immediately."""
+        self.snooze(timedelta(seconds=0))
+
+    def _restore_target(self, task):
+        if task.cancelled():
+            return
+        self.oneshot = self._saved_oneshot
+        self.target = self._saved_target
+        self._snoozing = False
 
     async def _schedule(self):
-        if not self._target:
+        target_time = self._target
+        if not target_time:
             self._state = self.OFF
             return
 
         self._state = self.WAITING
-        now = datetime.now()
-        target = datetime.combine(now.date(), self._target)
-        if target < now:
-            tomorrow = now + timedelta(days=1)
-            target = datetime.combine(tomorrow.date(), self._target)
-        self._next_elapse = target
-        target = self.adjust_alarm(target)
-        self._logger.debug(f"Alarm will go off in {(target-now)}")
-        await asyncio.sleep((target - now).total_seconds())
+        if target_time is not True:
+            now = datetime.now()
+            target = datetime.combine(now.date(), target_time)
+            if target < now:
+                tomorrow = now + timedelta(days=1)
+                target = datetime.combine(tomorrow.date(), target_time)
+            self._next_elapse.value = target
+            target = self.adjust_alarm(target)
+            while datetime.now() < target:
+                await asyncio.sleep(self.TICK_S)
         self._state = self.IN_PROGRESS
-        self._logger.debug("Ring ring!")
-        if self.callback:
-            await run(self.callback)
-        if not self.oneshot:
-            self.waiter = asyncio.create_task(self._schedule())
-        else:
+        self._logger.debug(f"{self.name} elapsed.")
+        print("creating task")
+        ring_task = asyncio.create_task(run(self.callback))
+        print("waiting for event")
+        await self._cancel_event.wait()
+        print("got event")
+        self._cancel_event.clear()
+        ring_task.cancel()
+        if self.cancel_callback:
+            await run(self.cancel_callback)
+        if self.oneshot:
             self._state = self.OFF
+        else:
+            self._waiter = asyncio.create_task(self._schedule())
 
 
 class CachingAlarm(Alarm):
@@ -125,17 +222,54 @@ class AlarmEndpoint(Endpoint[Alarm]):
         self.router.get("/next-elapse")(self.next_elapse)
         self.router.get("/")(self.get_target)
         self.router.put("/")(self.set_target)
+        self.router.delete("/")(self.cancel)
+        self.router.get("/enabled")(self.get_enabled)
+        self.router.put("/enabled")(self.set_enabled)
+        self.router.get("/state")(self.get_state)
+        self.router.put("/snooze")(self.set_snooze)
+        self.router.get("/snooze")(self.get_snooze)
+        self.router.put("/trigger")(self.trigger)
 
     def next_elapse(self) -> Optional[datetime]:
         """Get next elapse point."""
         return self.thing.next_elapse
 
     # These are async to force them to be in the main thread
-    async def get_target(self) -> Optional[datetime]:
+    async def get_target(self) -> Optional[time]:
         """Get alarm target."""
         return self.thing.target
 
-    async def set_target(self, val: time) -> Optional[datetime]:
+    async def set_target(self, val: time) -> Optional[time]:
         """Set alarm target."""
         self.thing.target = val
         return await self.get_target()
+
+    async def get_enabled(self) -> bool:
+        """Get alarm enabled or not."""
+        return self.thing.enabled
+
+    async def set_enabled(self, val: bool) -> bool:
+        """Set alarm enabled or not."""
+        self.thing.enabled = val
+        return await self.get_enabled()
+
+    async def get_state(self):
+        """Get alarm state."""
+        return self.thing.state
+
+    async def set_snooze(self, val: timedelta) -> time:
+        """Set alarm snooze."""
+        self.thing.snooze(val)
+        return cast(time, await self.get_target())
+
+    async def get_snooze(self) -> bool:
+        """Get whether alarm snoozing."""
+        return self.thing.snoozing
+
+    async def cancel(self) -> bool:
+        """Cancel alarm in progress (if any)."""
+        return self.thing.cancel()
+
+    async def trigger(self):
+        """Trigger elapse."""
+        self.thing.trigger()
