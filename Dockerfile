@@ -36,8 +36,6 @@ COPY --link --from=builder /app/dist /app/dist
 WORKDIR /app
 RUN --mount=type=cache,target=/var/cache \
 <<EOF
-  # apk del make py3-setuptools
   pip install dist/*.whl
-  # rm -r dist
 EOF
 CMD ["rpi-clock"]
