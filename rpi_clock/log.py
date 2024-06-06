@@ -12,6 +12,7 @@ _stdlib_level_map = logging.getLevelNamesMapping() | {
 
 def setup_logging(log_level: str) -> None:
     logfire.configure()
+    assert log_level in _stdlib_level_map
 
     def _filter_by_level(_: WrappedLogger, level_name: str, event_dict: dict) -> dict:
         if _stdlib_level_map[level_name] < _stdlib_level_map[log_level]:
