@@ -2,8 +2,10 @@ import structlog
 from structlog.typing import WrappedLogger
 import logfire
 
-from structlog import DropEvent
+from structlog import DropEvent, get_logger
 import logging
+
+logger = get_logger()
 
 _stdlib_level_map = logging.getLevelNamesMapping() | {
     k.lower(): v for k, v in logging.getLevelNamesMapping().items()
@@ -39,3 +41,4 @@ def setup_logging(log_level: str) -> None:
             structlog.dev.ConsoleRenderer(),
         ],
     )
+    logger.info("Set up logging", level=log_level)
