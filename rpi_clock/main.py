@@ -1,11 +1,14 @@
+from .config import Settings
+from .log import setup_logging
+
+setup_logging(Settings().log_level)
+
 from typing import Never
 import uvicorn
 import typer
 
 from . import api
 from .clock import loop
-from .config import Settings
-from .log import setup_logging
 
 app = typer.Typer()
 
@@ -23,5 +26,4 @@ def main(port: int = 8000) -> None:
 
 
 if __name__ == "__main__":
-    setup_logging(Settings().log_level)
     app()
