@@ -4,6 +4,8 @@ import typer
 
 from . import api
 from .clock import loop
+from .config import Settings
+from .log import setup_logging
 
 app = typer.Typer()
 
@@ -14,11 +16,12 @@ async def start_server(config: uvicorn.Config) -> Never:
 
 
 @app.command(help="Run clock")
-def main(port: int=8000) -> None:
+def main(port: int = 8000) -> None:
     config = uvicorn.Config(api.app, host="0.0.0.0", port=port)
     loop.create_task(start_server(config))
     loop.run_forever()
 
 
 if __name__ == "__main__":
+    setup_logging(Settings().log_level)
     app()

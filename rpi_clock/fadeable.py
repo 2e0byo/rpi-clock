@@ -16,7 +16,10 @@ from structlog import get_logger
 
 from .endpoint import Endpoint
 
+from xdg_base_dirs import xdg_cache_home
+
 logger = get_logger()
+
 
 class Fadeable(ABC):
     """Base Class for a fadeable output."""
@@ -176,14 +179,18 @@ class MockFadeable(Fadeable):
         return await self.get_duty_mock()
 
 
+def default_cache_dir() -> Path:
+    return xdg_cache_home() / "rpi_clock"
+
+
 class CachingFadeable(Fadeable):
     """A fadeable which caches runtime-settable values between runs if possible."""
 
-    def __init__(self, *args, cachedir=Path("~/.cache/rpi_clock/"), **kwargs):
+    def __init__(self, *args, cache_dir: Path | None = None, **kwargs):
         super().__init__(*args, **kwargs)
-        cachedir = cachedir.expanduser().resolve()
-        cachedir.mkdir(exist_ok=True, parents=True)
-        self.cachef = cachedir / f"{self.name}.json"
+        cache_dir = cache_dir or default_cache_dir()
+        cache_dir.mkdir(exist_ok=True, parents=True)
+        self.cachef = cache_dir / f"{self.name}.json"
         cache = self.load_cache()
 
         for key in {"min_duty", "max_duty"}:
@@ -329,7 +336,9 @@ class Lamp(CachingFadeable):
                         self._logger.debug(f"Got {resp} for {val} ({bytes(raw)})")
                     if resp == val:
                         if attempt > 1:
-                            self._logger.debug(f"Set lamp to {val} after {attempt} attempts.")
+                            self._logger.debug(
+                                f"Set lamp to {val} after {attempt} attempts."
+                            )
                         return
                     if attempt == 4:
                         await self.reset()
