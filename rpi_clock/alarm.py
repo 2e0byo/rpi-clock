@@ -11,6 +11,7 @@ from .reactive import Watched
 
 logger = get_logger()
 
+
 class Alarm:
     """An alarm."""
 
@@ -95,10 +96,10 @@ class Alarm:
     def cancel(self) -> bool:
         """Cancel running alarm."""
         if self.state != self.IN_PROGRESS:
-            self._logger.debug(f"No need to cancel, currently {self.state}")
+            self._logger.info(f"No need to cancel, currently {self.state}")
             return False
         else:
-            self._logger.debug("cancel")
+            self._logger.info("cancel")
             self._cancel_event.set()
             return True
 
@@ -163,12 +164,12 @@ class Alarm:
             while datetime.now() < target:
                 await asyncio.sleep(self.TICK_S)
         self._state = self.IN_PROGRESS
-        self._logger.debug(f"{self.name} elapsed.")
-        print("creating task")
+        self._logger.info(f"{self.name} elapsed.")
+        self._logger.debug("creating task")
         ring_task = asyncio.create_task(run(self.callback))
-        print("waiting for event")
+        self._logger.debug("waiting for event")
         await self._cancel_event.wait()
-        print("got event")
+        self._logger.info("alarm over; cancelling")
         self._cancel_event.clear()
         ring_task.cancel()
         if self.cancel_callback:
