@@ -7,7 +7,6 @@ license = "MIT"
 
 [tool.poetry.dependencies]
 python = "^3.11,<3.13"
-pigpio = "^1.78"
 rpi-hardware-pwm = "^0.1.4"
 gpiozero = "^2.0.1"
 mopidy-asyncio-client = "^3.1.0"
