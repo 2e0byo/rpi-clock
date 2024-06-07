@@ -1,14 +1,15 @@
+from typing import Never
+
+import typer
+import uvicorn
+
 from .config import Settings
 from .log import setup_logging
 
 setup_logging(Settings().log_level)
 
-from typing import Never
-import uvicorn
-import typer
-
-from . import api
-from .clock import loop
+from . import api  # noqa: E402
+from .clock import loop  # noqa: E402
 
 app = typer.Typer()
 

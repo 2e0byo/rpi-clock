@@ -4,6 +4,7 @@ from pathlib import Path
 from time import monotonic, strftime
 
 from structlog import get_logger
+
 from .alarm import CachingAlarm
 from .display import LcdDisplay, Menu, MenuItem
 from .hal import down_button, enter_button, lamp, lcd, mute, up_button, volume
@@ -17,10 +18,10 @@ old = None
 
 
 FADE_DURATION = 300
-# FADE_DURATION = 10
 START_VOLUME = 4 / 50
 MAX_VOLUME = 0.15
 MAX_SOFTWARE_VOLUME = 0.78
+
 
 # TODO move this to alarm, as it needs to be fade aware.
 # TODO correct for fade duration
@@ -42,8 +43,8 @@ async def ring():
         asyncio.create_task(lcd.backlight.fade(percent_duty=1))
     except asyncio.CancelledError:
         pass
-    except Exception as e:
-        logger.error(e)
+    except Exception:
+        logger.exception("Error in ring")
 
 
 async def end_alarm(*_):
@@ -65,7 +66,6 @@ fade_button_lock = asyncio.Lock()
 async def fade_up_down(button):
     MANUAL_FADE_DURATION = 0.01
     async with fade_button_lock:
-        print("-" * 70)
         if await lamp.get_duty() > 0:
             delta = -0.005
         else:
@@ -73,12 +73,10 @@ async def fade_up_down(button):
             await lamp.set_percent_duty(MIN_BRIGHTNESS)
         while button.state:
             current = await lamp.get_percent_duty()
-            print(f"{current:1.2}", end="\r", flush=True)
             await lamp.set_percent_duty(current + delta)
             await asyncio.sleep(MANUAL_FADE_DURATION)
         if await lamp.get_percent_duty() < MIN_BRIGHTNESS:
             await lamp.set_percent_duty(0)
-        print("=" * 70)
 
 
 async def up(*args):
@@ -92,12 +90,6 @@ async def down(*args):
 async def incr():
     while up_button.state:
         await lamp.set_duty(await lamp.get_duty() + 1)
-        # await asyncio.sleep(0.1)
-
-
-# up_button["press"] = up
-# up_button["long"] = incr
-# down_button["press"] = down
 
 
 async def toggle_backlight(*args):
@@ -107,9 +99,7 @@ async def toggle_backlight(*args):
         await lcd.backlight.fade(percent_duty=1)
 
 
-# enter_button["press"] = toggle_backlight
 enter_button["long"] = fade_up_down
-# enter_button["release"] = toggle_backlight
 
 
 alarm = CachingAlarm(

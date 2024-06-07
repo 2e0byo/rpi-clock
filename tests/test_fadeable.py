@@ -2,10 +2,10 @@ import asyncio
 
 import pytest
 from gpiozero.pins.mock import MockFactory
+
 from rpi_clock.fadeable import (
     PWM,
     Device,
-    Fadeable,
     Lamp,
     MockFadeable,
     SpiControllerError,
@@ -171,7 +171,8 @@ async def test_spi_rate_failure(mocker):
     pin_factory.spi = mocker.Mock()
     pin_factory.spi.return_value = spi
 
-    f = Lamp(pin_factory=pin_factory)
+    Lamp(pin_factory=pin_factory)
+
     rate.assert_called_once()
 
 

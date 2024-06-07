@@ -33,3 +33,27 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
 rpi-clock = "rpi_clock.main:app"
+
+[tool.isort]
+profile = "black"
+
+[tool.docformatter]
+recursive = true
+black = true
+
+[tool.ruff]
+lint.select = [
+    "E", # Pycodestyle
+    "ERA", # Eradicate
+    "F", # Pyflakes
+    "T20", # Print
+    "TRY002", # Create own exception
+    "TRY004", # Type check without TypeError
+    "TRY201", # verbose raise
+    "TRY301", # raise with try
+    "TRY302", # useless try except
+    "TRY400", # logging.error used over logging.exception
+    "TRY401", # verbose log message
+    "Q", # Quotes
+#     "DTZ", # Naive datetime
+]

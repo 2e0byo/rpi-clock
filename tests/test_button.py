@@ -3,9 +3,9 @@ from collections import namedtuple
 
 import pytest
 from gpiozero.pins.mock import MockFactory
-from rpi_clock.button import Button, PiButton, ZeroButton
-
 from helpers import sleep_ms
+
+from rpi_clock.button import Button, PiButton, ZeroButton
 
 LONG_MS = 10
 DOUBLE_MS = 6
@@ -42,7 +42,7 @@ def not_called(button, fn):
 
 
 def press(button: Button):
-    print("--pressing--")
+    print("--pressing--")  # noqa: T201
     if button.inverted:
         button._callback(Button.RISING_EDGE)
     else:
@@ -50,7 +50,7 @@ def press(button: Button):
 
 
 def release(button: Button):
-    print("--releasing--")
+    print("--releasing--")  # noqa: T201
     if button.inverted:
         button._callback(Button.FALLING_EDGE)
     else:
@@ -222,7 +222,7 @@ async def test_single_press_suppress_double(button):
     not_called(button, "double")
 
 
-async def test_single_press_suppress_double(button):
+async def test_single_press_suppress_double_release(button):
     button.suppress = True
     del button["press"]
     del button["release"]

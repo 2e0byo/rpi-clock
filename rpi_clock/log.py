@@ -1,9 +1,9 @@
-import structlog
-from structlog.typing import WrappedLogger
-import logfire
-
-from structlog import DropEvent, get_logger
 import logging
+
+import logfire
+import structlog
+from structlog import DropEvent, get_logger
+from structlog.typing import WrappedLogger
 
 logger = get_logger()
 

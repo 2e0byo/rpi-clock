@@ -1,11 +1,11 @@
 import pytest
+
 from rpi_clock.lcd import Lcd
 
 
 @pytest.fixture
-def lcd(tmp_path):
-    l = Lcd(path=tmp_path / "lcd")
-    return l
+def lcd(tmp_path) -> Lcd:
+    return Lcd(path=tmp_path / "lcd")
 
 
 def test_restart_on_init(tmp_path, mocker):
