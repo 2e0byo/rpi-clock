@@ -34,19 +34,28 @@
                     buildInputs = (old.buildInputs or []) ++ [super.setuptools];
                   }
                 );
+              lgpio =
+                super.lgpio.overridePythonAttrs
+                (
+                  old: {
+                    buildInputs = (old.buildInputs or []) ++ [super.setuptools];
+                  }
+                );
             });
         };
         default = self.packages.${system}.rpiClock;
       };
 
-      devShells.default = pkgs.mkShell {
+      devShells.prebuilt = pkgs.mkShell {
         inputsFrom = [self.packages.${system}.rpiClock];
         packages = [pkgs.poetry];
       };
 
-      devShells.poetry = pkgs.mkShell {
-          packages = [ pkgs.poetry ];
+      devShells.default = pkgs.mkShell {
+        packages = with pkgs; [poetry pre-commit python311];
+        shellHook = ''
+          pre-commit install
+        '';
       };
-
     });
 }

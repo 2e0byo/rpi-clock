@@ -160,3 +160,4 @@ cython_debug/
 
 */__pycache__/
 /result
+/.direnv/
