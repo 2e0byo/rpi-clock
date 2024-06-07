@@ -6,14 +6,15 @@ FROM base as builder
 RUN --mount=type=cache,target=/var/cache \
 <<EOF
   apk update
-  apk add poetry
+  apk add curl
+  curl -sSL https://install.python-poetry.org | python3 -
 EOF
 COPY . /app
 WORKDIR /app
 RUN --mount=type=cache,target=/var/cache/pip \
 <<EOF
   touch README.md
-  poetry build
+  /root/.local/bin/poetry build
 EOF
 
 FROM base as lgpio
