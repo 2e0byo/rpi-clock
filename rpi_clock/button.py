@@ -1,6 +1,6 @@
 import asyncio
 from collections import UserDict
-from typing import Optional
+from typing import Callable, Optional
 
 from gpiozero import Device, Pin
 from gpiozero.pins import Factory
@@ -27,11 +27,11 @@ class Button(UserDict):
         long_ms: int = 1_000,
         double_ms: int = 400,
         suppress: bool = False,
-        name: str = None,
+        name: str | None = None,
         blocking: bool = False,
     ):
         self._event = asyncio.Event()
-        self._edge: int = None
+        self._edge: int | None= None
         self.rising_edge = self.RISING_EDGE
         self.falling_edge = self.FALLING_EDGE
         if inverted:
@@ -169,7 +169,7 @@ class Button(UserDict):
             else:
                 raise ValueError(f"Unknown edge {edge} received.")
 
-    def __setitem__(self, key: str, fn: callable = None):
+    def __setitem__(self, key: str, fn: Callable | None = None):
         """Set a function to run."""
         if key not in self.HOOKS:
             raise ValueError(f"Function {key} is not a valid hook")
@@ -189,7 +189,7 @@ class ZeroButton(Button):
 
     def __init__(
         self,
-        pin: int,
+        pin_no: int,
         *args,
         inverted: bool = False,
         debounce_ms: int = 0,
@@ -200,7 +200,7 @@ class ZeroButton(Button):
         kwargs["inverted"] = inverted
         super().__init__(*args, **kwargs)
         pin_factory = pin_factory or Device._default_pin_factory()
-        pin: Pin = pin_factory.pin(pin)
+        pin: Pin = pin_factory.pin(pin_no)
         pin.function = "input"
         pin.pull = "down" if inverted else "up"
         if debounce_ms:
