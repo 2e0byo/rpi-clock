@@ -6,17 +6,15 @@ from time import monotonic, sleep
 from typing import Optional, cast
 from unittest.mock import AsyncMock
 
-from fastapi import HTTPException
 from gpiozero import SPI, Device
 from gpiozero.exc import SPIFixedRate
 from gpiozero.pins import Factory
 from gpiozero.pins.native import NativeFactory
 from rpi_hardware_pwm import HardwarePWM
 from structlog import get_logger
+from xdg_base_dirs import xdg_cache_home
 
 from .endpoint import Endpoint
-
-from xdg_base_dirs import xdg_cache_home
 
 logger = get_logger()
 
@@ -80,7 +78,10 @@ class Fadeable(ABC):
             self._fade_task = None
 
     def cancel_fade(self):
-        """Cancel a running fade.  Not guaranteed to succeed immediately."""
+        """Cancel a running fade.
+
+        Not guaranteed to succeed immediately.
+        """
         if self._fade_task:
             self._fade_task.cancel()
 
@@ -196,15 +197,15 @@ class CachingFadeable(Fadeable):
         for key in {"min_duty", "max_duty"}:
             try:
                 getattr(self, f"set_{key}")(cache[key])
-            except Exception as e:
-                self._logger.exception(f"Failed to set {key}: {e}")
+            except Exception:
+                self._logger.exception("Failed to set %s", key)
 
     def load_cache(self) -> dict:
         try:
             with self.cachef.open() as f:
                 return load(f)
-        except Exception as e:
-            self._logger.exception(f"Failed to load cache: {e}")
+        except Exception:
+            self._logger.exception("Failed to load cache")
             return {}
 
     def save_cache(self, cache: dict):
@@ -298,8 +299,7 @@ class Lamp(CachingFadeable):
             self._logger.error(rate_error)
 
     def spi_cmd(self, data: bytes) -> bytes:
-        """
-        Transfer data to and from the controller over spi.
+        """Transfer data to and from the controller over spi.
 
         This method abstracts from a particular spi driver.
         """

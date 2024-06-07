@@ -1,6 +1,7 @@
 import asyncio
 
 import pytest
+
 from rpi_clock.timer import Timer
 
 

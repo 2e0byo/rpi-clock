@@ -3,9 +3,9 @@ import json
 from datetime import datetime, time, timedelta
 
 import pytest
-from rpi_clock.alarm import Alarm, CachingAlarm
-
 from helpers import sleep_ms
+
+from rpi_clock.alarm import Alarm, CachingAlarm
 
 
 @pytest.fixture

@@ -1,7 +1,10 @@
+# ruff: noqa: ERA001
 from pathlib import Path
+
 from structlog import get_logger
 
 from .fadeable import Fadeable
+
 logger = get_logger()
 
 
@@ -24,7 +27,7 @@ class Lcd:
         rows: int = 2,
         cols: int = 16,
         path: Path = Path("/dev/lcd"),
-        backlight: Fadeable | None= None,
+        backlight: Fadeable | None = None,
     ):
         self.path = Path(path)
         self.rows = rows
@@ -58,10 +61,10 @@ class Lcd:
 
     def newchar(self, alias: str, char: bytearray):
         """Create a new character with an alias."""
-        index = len(self._specials) + 1 % 7
-        self._write(self.NEWCHAR.format(keys, "".join(hex(b)[2:] for b in char)))
-        self._specials[alias] = index.to_bytes(1, "big")
-        self._trans = str.maketrans(self._specials)
+        # index = len(self._specials) + 1 % 7
+        # self._write(self.NEWCHAR.format(keys, "".join(hex(b)[2:] for b in char)))
+        # self._specials[alias] = index.to_bytes(1, "big")
+        # self._trans = str.maketrans(self._specials)
 
     def __setitem__(self, line: int, msg: str):
         """Set a line of the display to a string."""

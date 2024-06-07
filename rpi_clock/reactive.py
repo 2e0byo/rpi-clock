@@ -1,4 +1,5 @@
 """Fake reactive properties, i.e. callback wrappers."""
+
 from typing import Generic, Optional, TypeVar
 
 from . import sync_run

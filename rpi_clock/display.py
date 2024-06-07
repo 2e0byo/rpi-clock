@@ -36,7 +36,7 @@ class Display(ABC):
     def add_screen(self, screen: Screen):
         """Add a screen."""
         if not isinstance(screen, Screen):
-            raise ValueError("screen must be a Screen().")
+            raise TypeError("screen must be a Screen().")
         self._screens[screen.name] = screen
         if not self.current_screen:
             self.current_screen = screen
@@ -120,15 +120,15 @@ class Screen:
     def __setitem__(self, where, msg: str) -> None:
         if isinstance(where, tuple):
             row, col = where
-            l = list(self._store[row])
-            l[col] = list(msg)
-            self._store[row] = "".join(l) + " " * (self.cols - len(l))
+            line = list(self._store[row])
+            line[col] = list(msg)
+            self._store[row] = "".join(line) + " " * (self.cols - len(line))
         else:
             self._store[where] = msg + " " * (self.cols - len(msg))
         self.display.update(self)
 
     def __repr__(self):
-        return f"Screen(rows={self.rows}, cols={self.cols}, display={self.display}, name={self.name})"
+        return f"Screen(rows={self.rows}, cols={self.cols}, display={self.display}, name={self.name})"  # noqa: E501
 
 
 @dataclass

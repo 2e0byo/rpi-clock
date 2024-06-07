@@ -1,6 +1,4 @@
 """An api to control the clock."""
-import asyncio
-from typing import Optional
 
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse

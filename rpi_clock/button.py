@@ -4,17 +4,19 @@ from typing import Callable, Optional
 
 from gpiozero import Device, Pin
 from gpiozero.pins import Factory
-
 from structlog import get_logger
 
 from .timer import Timer
 
 logger = get_logger()
 
+
 class Button(UserDict):
     """A button, api loosely inspired by Peter Hinch's micropython `Pushbutton`.
 
-    This class assumes its `.callback()` will be called from elsewhere.  It mostly exists for testing."""
+    This class assumes its `.callback()` will be called from elsewhere. It mostly exists
+    for testing.
+    """
 
     HOOKS = {"press", "release", "long", "double"}
     FALLING_EDGE = 0
@@ -31,7 +33,7 @@ class Button(UserDict):
         blocking: bool = False,
     ):
         self._event = asyncio.Event()
-        self._edge: int | None= None
+        self._edge: int | None = None
         self.rising_edge = self.RISING_EDGE
         self.falling_edge = self.FALLING_EDGE
         if inverted:
@@ -59,8 +61,8 @@ class Button(UserDict):
         self.in_progress = False
 
     async def _doubleclick_timeout(self):
-        """In suppress mode, work out if a double click has expired, and if so,
-        call the release fn if it exists."""
+        """In suppress mode, work out if a double click has expired, and if so, call the
+        release fn if it exists."""
 
         self._double_pending = False
         if not self.suppress:
@@ -96,11 +98,9 @@ class Button(UserDict):
         self._long_timer.duration = val
 
     def _callback(self, level: int):
-        """
-        Callback for button events.
+        """Callback for button events.
 
-        Note that this runs in a different thread context from the main event
-        loop.
+        Note that this runs in a different thread context from the main event loop.
         """
         self._edge = level
         self._loop.call_soon_threadsafe(lambda: self._event.set())
@@ -180,8 +180,6 @@ class Button(UserDict):
 
     def __delitem__(self, key: str):
         self.data[key] = None
-
-
 
 
 class ZeroButton(Button):

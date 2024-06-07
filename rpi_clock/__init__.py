@@ -5,6 +5,7 @@ T = TypeVar("T")
 
 # NOTE this api is terrible; just importing what was there.
 
+
 async def run(fn: Callable[[], T] | None) -> T | None:
     """Run a fn or coro."""
     if fn:

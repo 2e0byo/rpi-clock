@@ -2,8 +2,9 @@ import asyncio
 import json
 from datetime import datetime, time, timedelta
 from pathlib import Path
+from typing import Callable, Optional, Union, cast
+
 from structlog import get_logger
-from typing import Coroutine, Optional, Union, cast, Callable
 
 from . import run
 from .endpoint import Endpoint

@@ -1,12 +1,11 @@
-import asyncio
-from structlog import get_logger
-
 import pytest
+from structlog import get_logger
 
 from rpi_clock.fadeable import SpiControllerError
 from rpi_clock.hal import lamp
 
 logger = get_logger()
+
 
 @pytest.fixture(scope="module")
 def hardware():

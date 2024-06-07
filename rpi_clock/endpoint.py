@@ -1,10 +1,11 @@
 """Endpoint templates for fastapi."""
+
 from abc import ABC
 from typing import Generic, TypeVar
 
 from fastapi.routing import APIRouter
 
-ThingT = TypeVar("ThingT", bound="Thing")
+ThingT = TypeVar("ThingT")
 
 
 class Endpoint(ABC, Generic[ThingT]):

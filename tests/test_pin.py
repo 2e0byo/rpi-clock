@@ -1,6 +1,5 @@
-import asyncio
-
 import pytest
+
 from rpi_clock.pin import Pin, PinError
 
 

@@ -2,6 +2,7 @@ from structlog import get_logger
 
 logger = get_logger()
 
+
 class PinError(Exception):
     pass
 
@@ -17,7 +18,7 @@ class Pin:
         pin: int,
         mode: int,
         inverted: bool = False,
-        name: str| None = None,
+        name: str | None = None,
     ):
         self.pi = pi
         self.pin = pin
@@ -30,7 +31,7 @@ class Pin:
         self._logger.debug(f"Set pin{pin} to mode {mode}.")
 
     def __call__(self, val=None):
-        if val == None:
+        if val is None:
             val = self.pi.read(self.pin)
             return val if not self.inverted else not val
 
