@@ -860,17 +860,6 @@ files = [
 ]
 
 [[package]]
-name = "pigpio"
-version = "1.78"
-description = "Raspberry Pi GPIO module"
-optional = false
-python-versions = "*"
-files = [
-    {file = "pigpio-1.78-py2.py3-none-any.whl", hash = "sha256:81e46f640c4e6342881fa9bbe290dbcd4fc179619dc6591e57a9d4a084dc49fa"},
-    {file = "pigpio-1.78.tar.gz", hash = "sha256:91efa50e4990649da97408a384782d6ccf58342fc59cdfe21ed7a42911569975"},
-]
-
-[[package]]
 name = "pluggy"
 version = "1.5.0"
 description = "plugin and hook calling mechanisms for python"
@@ -1835,4 +1824,4 @@ test = ["big-O", "importlib-resources", "jaraco.functools", "jaraco.itertools", 
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11,<3.13"
-content-hash = "eedde197db42febff4d3e2813524ed24ff7b096876b7e864cade814e449c8019"
+content-hash = "69593b9fa0353df0217d3598df97dd9b54e36879f9c3059dadb97ecdf658f1ac"

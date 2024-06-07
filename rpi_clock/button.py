@@ -2,7 +2,6 @@ import asyncio
 from collections import UserDict
 from typing import Optional
 
-import pigpio
 from gpiozero import Device, Pin
 from gpiozero.pins import Factory
 
@@ -183,24 +182,6 @@ class Button(UserDict):
         self.data[key] = None
 
 
-class PiButton(Button):
-    """A button responding to events from PiGPIO."""
-
-    def __init__(
-        self,
-        pi,
-        pin,
-        *args,
-        inverted=False,
-        debounce_ms: int = 100,
-        **kwargs,
-    ):
-        kwargs["inverted"] = inverted
-        super().__init__(*args, **kwargs)
-        pi.set_mode(pin, pigpio.INPUT)
-        pi.set_pull_up_down(pin, pigpio.PUD_DOWN if inverted else pigpio.PUD_UP)
-        pi.set_glitch_filter(pin, debounce_ms)
-        pi.callback(pin, pigpio.EITHER_EDGE, self._callback)
 
 
 class ZeroButton(Button):
