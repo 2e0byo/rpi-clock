@@ -7,13 +7,18 @@ RUN --mount=type=cache,target=/var/cache \
 <<EOF
   apk update
   apk add poetry
+  poetry --version
 EOF
 COPY . /app
 WORKDIR /app
 RUN --mount=type=cache,target=/var/cache/pip \
 <<EOF
-  touch README.md
-  poetry build
+    touch README.md
+    # Poetry platform detection appears broken, and for some reason it makes a venv just to build
+    # Work around by making our own venv, which poetry then uses
+    python -m venv venv
+    source venv/bin/activate
+    poetry build -vv
 EOF
 
 FROM base as lgpio
