@@ -10,7 +10,7 @@ from .endpoint import Endpoint
 from .fadeable import FadeableEndpoint
 from .mopidy import mopidy_volume
 
-app = FastAPI()
+app = FastAPI(lifespan=hal.setup_hardware)
 
 
 class PinEndpoint(Endpoint[LED]):
@@ -37,7 +37,6 @@ volume = FadeableEndpoint(thing=hal.volume, prefix="/volume")
 mopidy_volume = FadeableEndpoint(thing=mopidy_volume, prefix="/mopidy-volume")
 backlight = FadeableEndpoint(thing=hal.backlight, prefix="/backlight")
 mute = PinEndpoint(thing=hal.mute, prefix="/mute")
-
 alarm = AlarmEndpoint(thing=clock.alarm, prefix="/alarm")
 
 app.include_router(lamp.router)
