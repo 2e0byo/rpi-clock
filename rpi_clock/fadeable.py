@@ -40,7 +40,6 @@ class Fadeable(ABC):
         self.max_fade_freq_hz = max_fade_freq_hz
         self._fade_task = None
         self._duty = 0
-        self._zero_task = asyncio.get_event_loop().create_task(self._zero())
         self._fade_lock = asyncio.Lock()
         self._max_duty = max_duty
         self.max_duty = max_duty
@@ -85,7 +84,7 @@ class Fadeable(ABC):
         if self._fade_task:
             self._fade_task.cancel()
 
-    async def _zero(self):
+    async def start(self) -> None:
         self._logger.info("Zeroing")
         await self.set_duty(0)
 
@@ -239,9 +238,12 @@ class PWM(CachingFadeable):
         """Initialise a new pwm fadeable object."""
         self.channel = channel
         self.pwm = HardwarePWM(channel, freq)
-        self.pwm.start(0)
         super().__init__(*args, **kwargs)
+
+    async def start(self) -> None:
+        self.pwm.start(0)
         self._logger.debug(f"Started pwm on channel {self.channel}.")
+        await super().start()
 
     async def get_hardware_duty(self):
         """Get the current raw duty cycle."""
