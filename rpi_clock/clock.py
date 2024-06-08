@@ -41,6 +41,7 @@ async def ring():
         asyncio.create_task(
             mopidy_volume.fade(percent_duty=MAX_SOFTWARE_VOLUME, duration=30)
         )
+        assert lcd.backlight
         asyncio.create_task(lcd.backlight.fade(percent_duty=1))
     except asyncio.CancelledError:
         pass
@@ -55,6 +56,7 @@ async def end_alarm(*_):
     await mopidy_volume.fade(duty=0, duration=10)
     mute.on()
     await stop()
+    assert lcd.backlight
     await lcd.backlight.fade(duty=0)
     display.current_screen = main_screen
 
@@ -92,6 +94,7 @@ async def incr():
 
 
 async def toggle_backlight(*args):
+    assert lcd.backlight
     if await lcd.backlight.get_percent_duty():
         await lcd.backlight.fade(percent_duty=0)
     else:
@@ -149,6 +152,7 @@ loop.create_task(clock_loop())
 
 
 async def backlight_on():
+    assert lcd.backlight
     await lcd.backlight.fade(percent_duty=1)
 
 
