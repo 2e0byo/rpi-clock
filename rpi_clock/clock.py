@@ -111,6 +111,7 @@ alarm.adjust_alarm = lambda val: (val - timedelta(seconds=FADE_DURATION))
 
 
 def display_alarm(old, new):
+    assert alarm.target
     main_screen[0] = "alarm {}: {}".format(
         "Off" if alarm.state == alarm.OFF else "On",
         alarm.target.strftime("%H:%M"),
