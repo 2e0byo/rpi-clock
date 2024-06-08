@@ -32,7 +32,7 @@ requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
-rpi-clock = "rpi_clock.main:app"
+rpi-clock = "rpi_clock.cli:app"
 
 [tool.isort]
 profile = "black"

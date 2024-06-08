@@ -1,6 +1,3 @@
-from contextlib import asynccontextmanager
-from typing import AsyncIterator
-
 from gpiozero import LED
 
 from . import pinmap
@@ -26,14 +23,3 @@ enter_button = ZeroButton(
 )
 
 # TODO move this out: this is the main entrypoint
-
-
-@asynccontextmanager
-async def setup_hardware(_) -> AsyncIterator[None]:
-    mute.off()
-
-    await backlight.start()
-    await lamp.start()
-    await volume.start()
-
-    yield
