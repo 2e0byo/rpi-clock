@@ -164,3 +164,6 @@ current_menu = main_menu
 up_button["press"] = current_menu.next
 down_button["press"] = current_menu.prev
 enter_button["release"] = current_menu.enter
+
+
+async def run() -> None: ...
