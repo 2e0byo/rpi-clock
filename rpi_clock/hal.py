@@ -12,7 +12,6 @@ lamp = Lamp(name="lamp")
 
 volume = PWM(pinmap.VOLUME_CHANNEL, name="backlight")
 mute = LED(pinmap.MUTE_PIN, active_high=False)
-mute.on()
 
 up_button = ZeroButton(
     pinmap.UP_BUTTON_PIN, suppress=True, name="UpButton", blocking=True
