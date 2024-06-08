@@ -147,8 +147,6 @@ async def clock_loop():
 
 if not alarm.target:
     alarm.target = time(hour=8, minute=0)
-loop = asyncio.get_event_loop()
-loop.create_task(clock_loop())
 
 
 async def backlight_on():
@@ -169,4 +167,6 @@ down_button["press"] = current_menu.prev
 enter_button["release"] = current_menu.enter
 
 
-async def run() -> None: ...
+async def run() -> None:
+    """Run the clock."""
+    await clock_loop()

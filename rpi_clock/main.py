@@ -1,3 +1,4 @@
+import asyncio
 from contextlib import asynccontextmanager
 from typing import AsyncIterator
 
@@ -14,6 +15,6 @@ async def setup_hardware(_) -> AsyncIterator[None]:
     # acquiring the native gpio pin for reset breaks something in the kernel lcd driver.
     # resetting here fixes it.
     hal.lcd.restart()
-    await clock.run()
+    asyncio.get_event_loop().create_task(clock.run())
 
     yield
