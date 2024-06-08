@@ -4,13 +4,13 @@ from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
 from gpiozero import LED
 
-from . import clock, hal
+from . import clock, hal, main
 from .alarm import AlarmEndpoint
 from .endpoint import Endpoint
 from .fadeable import FadeableEndpoint
 from .mopidy import mopidy_volume
 
-app = FastAPI(lifespan=hal.setup_hardware)
+app = FastAPI(lifespan=main.setup_hardware)
 
 
 class PinEndpoint(Endpoint[LED]):
