@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from logging import getLogger
-from typing import Optional, Union
+from typing import Callable, Optional, Union
 
 from . import run
 from .lcd import Lcd
@@ -55,12 +55,12 @@ class Display(ABC):
             self.display()
 
     @property
-    def current_screen(self) -> str:
+    def current_screen(self) -> Screen:
         """Get the current screen."""
         return self._current_screen
 
     @current_screen.setter
-    def current_screen(self, screen: str):
+    def current_screen(self, screen: Screen):
         """Set the current screen."""
         if screen.name not in self._screens:
             raise ValueError(f"No such screen: {screen}")
@@ -139,8 +139,8 @@ class MenuItem:
     prev: MenuItem
     screen: Screen
     enter: MenuItem
-    entry_fn: Optional[callable] = None
-    load_fn: Optional[callable] = None
+    entry_fn: Optional[Callable] = None
+    load_fn: Optional[Callable] = None
 
 
 class Menu:
@@ -172,7 +172,7 @@ class Menu:
         self.current_item.screen.display.current_screen = self.current_item.screen
         await run(self.current_item.load_fn)
 
-    def new_after(self, item: MenuItem = None, **kwargs):
+    def new_after(self, item: MenuItem | None = None, **kwargs):
         """Generate a new item after the given or current item."""
         if not item:
             item = self.current_item

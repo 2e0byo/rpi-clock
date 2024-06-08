@@ -26,13 +26,14 @@ pytest-asyncio = "^0.23.7"
 pytest-mock = "^3.14.0"
 pytest-repeat = "^0.9.3"
 flaky = "^3.8.1"
+mypy = "^1.10.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
-rpi-clock = "rpi_clock.main:app"
+rpi-clock = "rpi_clock.cli:app"
 
 [tool.isort]
 profile = "black"
@@ -57,3 +58,8 @@ lint.select = [
     "Q", # Quotes
 #     "DTZ", # Naive datetime
 ]
+
+[tool.mypy]
+plugins = ["pydantic.mypy"]
+ignore_missing_imports = true
+packages = ["rpi_clock"]

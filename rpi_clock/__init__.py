@@ -13,6 +13,8 @@ async def run(fn: Callable[[], T] | None) -> T | None:
         if asyncio.iscoroutine(x):
             x = await x
         return x
+    else:
+        return None
 
 
 def sync_run(fn: Callable[[], T] | None, *args, **kwargs) -> T | None:

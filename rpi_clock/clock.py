@@ -111,6 +111,7 @@ alarm.adjust_alarm = lambda val: (val - timedelta(seconds=FADE_DURATION))
 
 
 def display_alarm(old, new):
+    assert alarm.target
     main_screen[0] = "alarm {}: {}".format(
         "Off" if alarm.state == alarm.OFF else "On",
         alarm.target.strftime("%H:%M"),
@@ -163,3 +164,6 @@ current_menu = main_menu
 up_button["press"] = current_menu.next
 down_button["press"] = current_menu.prev
 enter_button["release"] = current_menu.enter
+
+
+async def run() -> None: ...

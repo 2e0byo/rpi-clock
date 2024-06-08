@@ -4,13 +4,13 @@ from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
 from gpiozero import LED
 
-from . import clock, hal
+from . import clock, hal, main
 from .alarm import AlarmEndpoint
 from .endpoint import Endpoint
 from .fadeable import FadeableEndpoint
 from .mopidy import mopidy_volume
 
-app = FastAPI()
+app = FastAPI(lifespan=main.setup_hardware)
 
 
 class PinEndpoint(Endpoint[LED]):
@@ -37,7 +37,6 @@ volume = FadeableEndpoint(thing=hal.volume, prefix="/volume")
 mopidy_volume = FadeableEndpoint(thing=mopidy_volume, prefix="/mopidy-volume")
 backlight = FadeableEndpoint(thing=hal.backlight, prefix="/backlight")
 mute = PinEndpoint(thing=hal.mute, prefix="/mute")
-
 alarm = AlarmEndpoint(thing=clock.alarm, prefix="/alarm")
 
 app.include_router(lamp.router)
