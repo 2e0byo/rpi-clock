@@ -1,14 +1,9 @@
-import asyncio
-
 from gpiozero import LED
 
 from . import pinmap
 from .button import ZeroButton
 from .fadeable import PWM, Lamp
 from .lcd import Lcd
-
-loop = asyncio.get_event_loop()
-
 
 backlight = PWM(pinmap.BACKLIGHT_CHANNEL, name="backlight")
 lcd = Lcd(backlight=backlight)
