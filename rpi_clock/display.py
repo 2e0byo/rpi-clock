@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from logging import getLogger
-from typing import Optional, Union
+from typing import Callable, Optional, Union
 
 from . import run
 from .lcd import Lcd
@@ -139,8 +139,8 @@ class MenuItem:
     prev: MenuItem
     screen: Screen
     enter: MenuItem
-    entry_fn: Optional[callable] = None
-    load_fn: Optional[callable] = None
+    entry_fn: Optional[Callable] = None
+    load_fn: Optional[Callable] = None
 
 
 class Menu:

@@ -1,4 +1,5 @@
 import asyncio
+from typing import Callable
 
 from . import run
 
@@ -6,12 +7,12 @@ from . import run
 class Timer:
     """Asyncio timer, api based loosely on Peter Hinch's Delay_ms."""
 
-    def __init__(self, duration_ms=1_000, fn: callable = None):
+    def __init__(self, duration_ms=1_000, fn: Callable | None = None):
         """Set up the timer."""
         self.task = None
         self.loop = asyncio.get_event_loop()
         self._duration = duration_ms / 1_000
-        self.fn: callable = fn
+        self.fn: Callable | None = fn
 
     @property
     def duration(self):
