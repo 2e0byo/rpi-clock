@@ -11,6 +11,9 @@ async def setup_hardware(_) -> AsyncIterator[None]:
     await hal.backlight.start()
     await hal.lamp.start()
     await hal.volume.start()
+    # acquiring the native gpio pin for reset breaks something in the kernel lcd driver.
+    # resetting here fixes it.
+    hal.lcd.restart()
     await clock.run()
 
     yield
