@@ -135,10 +135,10 @@ class Screen:
 class MenuItem:
     """An item in a menu."""
 
-    next: MenuItem
-    prev: MenuItem
+    next: MenuItem | None
+    prev: MenuItem | None
     screen: Screen
-    enter: MenuItem
+    enter: MenuItem | None
     entry_fn: Optional[Callable] = None
     load_fn: Optional[Callable] = None
 
@@ -151,20 +151,20 @@ class Menu:
         self._logger = getLogger(name)
 
     async def next(self, *_):
-        """Go to next screen."""
-        self.current_item = self.current_item.next
-        await self.load()
+        if item := self.current_item.next:
+            self.current_item = item
+            await self.load()
 
     async def prev(self, *_):
-        """Go to prev screen."""
-        self.current_item = self.current_item.prev
-        await self.load()
+        if item := self.current_item.prev:
+            self.current_item = item
+            await self.load()
 
     async def enter(self, *_):
-        """Enter."""
-        self.current_item = self.current_item.enter
-        await run(self.current_item.entry_fn)
-        await self.load()
+        if item := self.current_item.enter:
+            self.current_item = item
+            await run(item.entry_fn)
+            await self.load()
 
     async def load(self):
         """Load current screen."""

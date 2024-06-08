@@ -21,6 +21,7 @@ FADE_DURATION = 300
 START_VOLUME = 4 / 50
 MAX_VOLUME = 0.15
 MAX_SOFTWARE_VOLUME = 0.78
+MIN_BRIGHTNESS = 0.03
 
 
 # TODO move this to alarm, as it needs to be fade aware.
@@ -40,6 +41,7 @@ async def ring():
         asyncio.create_task(
             mopidy_volume.fade(percent_duty=MAX_SOFTWARE_VOLUME, duration=30)
         )
+        assert lcd.backlight
         asyncio.create_task(lcd.backlight.fade(percent_duty=1))
     except asyncio.CancelledError:
         pass
@@ -54,11 +56,10 @@ async def end_alarm(*_):
     await mopidy_volume.fade(duty=0, duration=10)
     mute.on()
     await stop()
+    assert lcd.backlight
     await lcd.backlight.fade(duty=0)
     display.current_screen = main_screen
 
-
-MIN_BRIGHTNESS = 0.03
 
 fade_button_lock = asyncio.Lock()
 
@@ -93,6 +94,7 @@ async def incr():
 
 
 async def toggle_backlight(*args):
+    assert lcd.backlight
     if await lcd.backlight.get_percent_duty():
         await lcd.backlight.fade(percent_duty=0)
     else:
@@ -145,11 +147,10 @@ async def clock_loop():
 
 if not alarm.target:
     alarm.target = time(hour=8, minute=0)
-loop = asyncio.get_event_loop()
-loop.create_task(clock_loop())
 
 
 async def backlight_on():
+    assert lcd.backlight
     await lcd.backlight.fade(percent_duty=1)
 
 
@@ -166,4 +167,6 @@ down_button["press"] = current_menu.prev
 enter_button["release"] = current_menu.enter
 
 
-async def run() -> None: ...
+async def run() -> None:
+    """Run the clock."""
+    await clock_loop()
