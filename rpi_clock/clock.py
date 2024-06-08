@@ -21,6 +21,7 @@ FADE_DURATION = 300
 START_VOLUME = 4 / 50
 MAX_VOLUME = 0.15
 MAX_SOFTWARE_VOLUME = 0.78
+MIN_BRIGHTNESS = 0.03
 
 
 # TODO move this to alarm, as it needs to be fade aware.
@@ -57,8 +58,6 @@ async def end_alarm(*_):
     await lcd.backlight.fade(duty=0)
     display.current_screen = main_screen
 
-
-MIN_BRIGHTNESS = 0.03
 
 fade_button_lock = asyncio.Lock()
 
