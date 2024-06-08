@@ -1,6 +1,6 @@
 """Fake reactive properties, i.e. callback wrappers."""
 
-from typing import Callable, Generic, Optional, TypeVar
+from typing import Any, Callable, Generic, Optional, TypeVar
 
 from . import sync_run
 
@@ -24,12 +24,12 @@ class Watched(Generic[ValueT]):
         self.callback = callback
 
     @property
-    def value(self) -> ValueT:
+    def value(self) -> ValueT | None:
         """Get current value."""
         return self._val
 
     @value.setter
-    def value(self, val: any) -> None:
+    def value(self, val: Any) -> None:
         """Set value."""
         sync_run(self.callback, self._val, val)
         self._val = val

@@ -11,7 +11,7 @@ class LightSensor:
     ONE_TIME_HIGH_RES_MODE = 0x20
     CONTINUOUS_HIGH_RES_MODE = 0b0001_0000
 
-    def __init__(self, addr: int = None):
+    def __init__(self, addr: int | None = None):
         self.bus = SMBus(1)
         self.addr = addr or self.ADDRESS
         self.val = None
