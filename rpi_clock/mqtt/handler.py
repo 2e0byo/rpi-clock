@@ -183,7 +183,10 @@ async def handle_alarm_cancel():
 async def setup_mqtt():
     from . import publish
 
+    logger.info("publishing")
+
     await publish.publish()
+    logger.info("Setting up mqtt handlers")
 
     asyncio.create_task(lamp.subscribe())
     asyncio.create_task(hw_volume.subscribe())
