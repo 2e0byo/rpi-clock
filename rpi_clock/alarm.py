@@ -100,8 +100,9 @@ class Alarm:
 
     def cancel(self) -> bool:
         """Cancel running alarm."""
-        if self.cancel_callback:
-            asyncio.create_task(run(self.cancel_callback))
+        # sync runs on a different thread atm...
+        # if self.cancel_callback:
+        #     asyncio.create_task(run(self.cancel_callback))
 
         if self.state != self.IN_PROGRESS:
             self._logger.info(f"No need to cancel, currently {self.state}")
@@ -131,8 +132,8 @@ class Alarm:
 
     def snooze(self, duration: timedelta):
         """Snooze for a given duration."""
-        if self.snooze_callback:
-            asyncio.create_task(run(self.snooze_callback))
+        # if self.snooze_callback:
+        #     asyncio.create_task(run(self.snooze_callback))
         if not self._snoozing:
             self._saved_target = self.target
             self._saved_oneshot = self.oneshot
