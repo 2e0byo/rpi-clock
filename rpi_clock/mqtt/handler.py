@@ -1,7 +1,10 @@
 import asyncio
+import inspect
 import json
+from dataclasses import dataclass
 from datetime import datetime
 from time import perf_counter
+from typing import Awaitable, Callable
 
 from structlog import get_logger
 
@@ -246,3 +249,62 @@ async def setup_mqtt():
     await publish.publish()
     logger.info("Setting up mqtt handlers")
     asyncio.create_task(handler())
+
+
+# this is terrible, but this whole thing is getting replaced with rust + state
+# machines anyhow.
+# why should only work code I write be actually good?
+
+
+@dataclass
+class Publish:
+    topic: str
+    payload: str
+
+    async def __call__(self):
+        async with connect() as client:
+            await client.publish(self.topic, self.payload)
+
+
+def add_async_callback(
+    target: Callable[[], Awaitable[None]] | Callable[[], None] | None,
+    cb: Callable[[], Awaitable[None]],
+) -> Callable[[], Awaitable[None]]:
+    if inspect.iscoroutinefunction(target):
+
+        async def wrapper():
+            asyncio.create_task(cb())
+            return await target()
+
+        return wrapper
+    elif target is not None:
+
+        async def wrapper():
+            asyncio.create_task(cb())
+            return target()
+
+        return wrapper
+    else:
+
+        async def wrapper():
+            asyncio.create_task(cb())
+
+        return wrapper
+
+
+clock.alarm.snooze_callback = add_async_callback(
+    clock.alarm.snooze_callback,
+    Publish(CONFIG["alarm-snooze"].payload["state_topic"], "ON"),
+)
+clock.alarm.elapsed_callback = add_async_callback(
+    clock.alarm.snooze_callback,
+    Publish(CONFIG["alarm-snooze"].payload["state_topic"], "OFF"),
+)
+clock.alarm.elapsed_callback = add_async_callback(
+    clock.alarm.snooze_callback,
+    Publish(CONFIG["alarm-in-progress"].payload["state_topic"], "ON"),
+)
+clock.alarm.cancel_callback = add_async_callback(
+    clock.alarm.snooze_callback,
+    Publish(CONFIG["alarm-in-progress"].payload["state_topic"], "OFF"),
+)
