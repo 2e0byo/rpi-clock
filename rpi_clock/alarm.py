@@ -20,7 +20,7 @@ class Alarm:
     WAITING = "WAITING"
     IN_PROGRESS = "IN PROGRESS"
     instances = 0
-    TICK_S = 10
+    TICK_S = 1
 
     def __init__(
         self,
