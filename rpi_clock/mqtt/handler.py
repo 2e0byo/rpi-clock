@@ -36,6 +36,7 @@ class FadeableHandler:
 
     async def handle(self, msg: str):
         data = json.loads(msg)
+        assert isinstance(data, dict), repr(data)
         if data["state"] == "ON":
             brightness = data.get("brightness", self._state)
             self._state = brightness
