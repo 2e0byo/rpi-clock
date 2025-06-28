@@ -99,7 +99,7 @@ CONFIG = {
         },
     ),
     "alarm-cancel": Config(
-        f"{PREFIX}/switch/{ID}_alarm_cancel/config",
+        f"{PREFIX}/button/{ID}_alarm_cancel/config",
         {
             "name": "Sunrise Clock Alarm Cancel",
             "unique_id": "sunrise_clock_alarm_cancel",
