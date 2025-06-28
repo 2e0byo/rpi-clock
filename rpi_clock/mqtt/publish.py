@@ -113,8 +113,19 @@ CONFIG = {
         {
             "name": "Sunrise Clock Alarm In Progress",
             "unique_id": "sunrise_clock_alarm_in_progress",
-            "in_progress_topic": "sunrise_clock/alarm/in_progress/set",
+            "state_topic": "sunrise_clock/alarm/in_progress/set",
             "icon": "mdi:bell-alert-outline",
+            "retain": True,
+        },
+    ),
+    "alarm-snooze": Config(
+        f"{PREFIX}/binary_sensor/{ID}_alarm_snooze/config",
+        {
+            "name": "Sunrise Clock Alarm Snoozing",
+            "unique_id": "sunrise_clock_alarm_snooze",
+            "state_topic": "sunrise_clock/alarm/in_progress/set",
+            "icon": "mdi:alarm-snooze",
+            "retain": True,
         },
     ),
 }
