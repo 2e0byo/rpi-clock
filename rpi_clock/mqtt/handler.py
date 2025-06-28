@@ -1,6 +1,7 @@
 import asyncio
 import json
 from datetime import datetime
+from time import perf_counter
 
 from structlog import get_logger
 
@@ -19,27 +20,32 @@ class FadeableHandler:
         self.thing = thing
         self.cmd_topic = cmd_topic
         self.state_topic = state_topic
+        self._state = None
 
     async def state(self) -> int:
-        return int(await self.thing.get_percent_duty() * 255)
+        assert self._state is not None
+        return self._state
 
-    async def handle(self, msg: str | int | float):
-        try:
-            data = json.loads(msg)
-            val = (
-                data["brightness"]
-                if "brightness" in data
-                else {"ON": 255, "OFF": 0}[data["state"]]
+    async def init(self, val: int):
+        self._state = val
+        await self.thing.fade(val / 255, duration=1)
+
+    async def hardware_init(self):
+        val = await self.thing.get_percent_duty()
+        self._state = round(val * 255)
+
+    async def handle(self, msg: str):
+        data = json.loads(msg)
+        if data["state"] == "ON":
+            brightness = data.get("brightness", self._state)
+            self._state = brightness
+        else:
+            brightness = 0
+        asyncio.create_task(
+            self.thing.fade(
+                percent_duty=brightness / 255, duration=data.get("transition", 1)
             )
-            asyncio.create_task(
-                self.thing.fade(
-                    percent_duty=val / 255, duration=data.get("transition", 1)
-                )
-            )
-        # HA requires lamps to handle both json and simple on/off
-        except (json.JSONDecodeError, TypeError):
-            val = int(msg) / 255
-            await self.thing.set_percent_duty(val)
+        )
 
 
 class SwitchHandler:
@@ -47,6 +53,9 @@ class SwitchHandler:
         self.thing = thing
         self.cmd_topic = cmd_topic
         self.state_topic = state_topic
+
+    async def hardware_init(self):
+        pass
 
     async def state(self) -> str:
         return "ON" if self.thing.value else "OFF"
@@ -59,12 +68,17 @@ class SwitchHandler:
         else:
             raise ValueError(msg)
 
+    init = handle
+
 
 class AlarmTimeHandler:
     def __init__(self, thing, cmd_topic: str, state_topic: str):
         self.thing: Alarm = thing
         self.cmd_topic = cmd_topic
         self.state_topic = state_topic
+
+    async def hardware_init(self):
+        pass
 
     async def state(self) -> str | None:
         if target := self.thing.target:
@@ -73,6 +87,8 @@ class AlarmTimeHandler:
     async def handle(self, msg: str):
         self.thing.target = datetime.strptime(msg, "%H:%M").time()
 
+    init = handle
+
 
 class AlarmEnabledHandler:
     def __init__(self, thing, cmd_topic: str, state_topic: str):
@@ -80,11 +96,16 @@ class AlarmEnabledHandler:
         self.cmd_topic = cmd_topic
         self.state_topic = state_topic
 
+    async def hardware_init(self):
+        pass
+
     async def state(self) -> str:
         return "ON" if self.thing.enabled else "OFF"
 
     async def handle(self, msg: str):
         self.thing.enabled = True if msg == "ON" else False
+
+    init = handle
 
 
 class AlarmTriggerHandler:
@@ -156,13 +177,51 @@ HANDLERS = dict(
 
 
 async def handler():
-    by_topic = {h.cmd_topic: h for h in HANDLERS.values()}
+    cmd_topics = {h.cmd_topic: h for h in HANDLERS.values()}
     async with connect() as client:
-        for handler in by_topic.values():
+        state_topics = {}
+        for handler in cmd_topics.values():
+            if hasattr(handler, "init"):
+                topic = getattr(handler, "state_topic")
+                assert topic
+                await client.subscribe(topic)
+                state_topics[topic] = handler
+
+        logger.info("Receiving any retained state")
+        messages = client.messages
+        start = perf_counter()
+        while perf_counter() - start < 5:
+            try:
+                async with asyncio.timeout(1):
+                    msg = await messages.__anext__()
+                    topic = str(msg.topic)
+                    handler = state_topics[topic]
+                    try:
+                        payload = msg.payload
+                        if isinstance(payload, bytes):
+                            payload = payload.decode()
+                        await handler.init(payload)
+                    except Exception:
+                        logger.exception(
+                            "Failed to init %s", handler.status_topic, msg=msg
+                        )
+                        await handler.hardware_init()
+                    finally:
+                        await client.unsubscribe(topic)
+                        state_topics.pop(topic)
+            except asyncio.TimeoutError:
+                pass
+
+        for topic, handler in state_topics:
+            logger.warn("Got no original state for topic %s", topic)
+            await handler.hardware_init()
+            await client.unsubscribe(topic)
+
+        for handler in cmd_topics.values():
             await client.subscribe(handler.cmd_topic)
 
         async for msg in client.messages:
-            handler = by_topic[str(msg.topic)]
+            handler = cmd_topics[str(msg.topic)]
             try:
                 payload = msg.payload
                 if isinstance(payload, bytes):
