@@ -204,7 +204,7 @@ async def handler():
                         await handler.init(payload)
                     except Exception:
                         logger.exception(
-                            "Failed to init %s", handler.status_topic, msg=msg
+                            "Failed to init %s", handler.state_topic, msg=msg
                         )
                         await handler.hardware_init()
                     finally:
