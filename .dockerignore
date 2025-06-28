@@ -1,4 +1,5 @@
 *
 !rpi_clock/*.py
+!rpi_clock/mqtt/*.py
 !pyproject.toml
 !poetry.lock

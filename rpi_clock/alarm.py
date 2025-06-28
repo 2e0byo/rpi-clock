@@ -20,18 +20,22 @@ class Alarm:
     WAITING = "WAITING"
     IN_PROGRESS = "IN PROGRESS"
     instances = 0
-    TICK_S = 10
+    TICK_S = 1
 
     def __init__(
         self,
         *,
         callback: Callable,
         cancel_callback: Optional[Callable] = None,
+        snooze_callback: Optional[Callable[[], None]] = None,
+        elapsed_callback: Optional[Callable[[], None]] = None,
         name: Optional[str] = None,
     ) -> None:
         """Set up the alarm."""
         self.callback = callback
         self.cancel_callback = cancel_callback
+        self.snooze_callback = snooze_callback
+        self.elapsed_callback = elapsed_callback
         self._saved_target: Optional[time] = None
         self._target: Union[time, None, bool] = None
         self._real_target: Optional[time] = None
@@ -96,6 +100,10 @@ class Alarm:
 
     def cancel(self) -> bool:
         """Cancel running alarm."""
+        # sync runs on a different thread atm...
+        # if self.cancel_callback:
+        #     asyncio.create_task(run(self.cancel_callback))
+
         if self.state != self.IN_PROGRESS:
             self._logger.info(f"No need to cancel, currently {self.state}")
             return False
@@ -124,6 +132,8 @@ class Alarm:
 
     def snooze(self, duration: timedelta):
         """Snooze for a given duration."""
+        # if self.snooze_callback:
+        #     asyncio.create_task(run(self.snooze_callback))
         if not self._snoozing:
             self._saved_target = self.target
             self._saved_oneshot = self.oneshot
@@ -166,6 +176,7 @@ class Alarm:
                 await asyncio.sleep(self.TICK_S)
         self._state = self.IN_PROGRESS
         self._logger.info(f"{self.name} elapsed.")
+        asyncio.create_task(run(self.elapsed_callback))
         self._logger.debug("creating task")
         ring_task = asyncio.create_task(run(self.callback))
         self._logger.debug("waiting for event")
