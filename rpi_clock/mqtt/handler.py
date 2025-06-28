@@ -164,7 +164,10 @@ async def handler():
         async for msg in client.messages:
             handler = by_topic[str(msg.topic)]
             try:
-                await handler.handle(msg.payload)
+                payload = msg.payload
+                if isinstance(payload, bytes):
+                    payload = payload.decode()
+                await handler.handle(payload)
             except Exception:
                 logger.exception(
                     "Failed to handle message for %s", handler.cmd_topic, msg=msg
