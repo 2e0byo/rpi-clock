@@ -26,8 +26,8 @@ class FadeableHandler:
         assert self._state is not None
         return self._state
 
-    async def init(self, val: int):
-        self._state = val
+    async def init(self, val: str):
+        self._state = int(val)
         await self.thing.fade(val / 255, duration=1)
 
     async def hardware_init(self):
