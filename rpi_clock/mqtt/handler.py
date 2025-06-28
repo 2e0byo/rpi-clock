@@ -5,6 +5,7 @@ from datetime import datetime
 from structlog import get_logger
 
 from rpi_clock import clock, hal
+from rpi_clock.alarm import Alarm
 from rpi_clock.mopidy import mopidy_volume
 from rpi_clock.mqtt.publish import CONFIG
 
@@ -35,26 +36,10 @@ class FadeableHandler:
                     percent_duty=val / 255, duration=data.get("transition", 1)
                 )
             )
+        # HA requires lamps to handle both json and simple on/off
         except (json.JSONDecodeError, TypeError):
             val = int(msg) / 255
             await self.thing.set_percent_duty(val)
-
-    async def subscribe(self):
-        async with connect() as client:
-            await client.subscribe(self.state_topic)
-            await client.publish(self.state_topic, await self.state())
-            async for msg in client.messages:
-                try:
-                    assert msg.payload
-                    assert not isinstance(msg.payload, bytearray)
-                    assert not isinstance(msg.payload, bytes)
-                    await self.handle(msg.payload)
-                except Exception:
-                    logger.exception(
-                        "Failed to handle message for %s", self.cmd_topic, msg=msg
-                    )
-                finally:
-                    await client.publish(self.state_topic, await self.state())
 
 
 class SwitchHandler:
@@ -63,7 +48,7 @@ class SwitchHandler:
         self.cmd_topic = cmd_topic
         self.state_topic = state_topic
 
-    def state(self) -> str:
+    async def state(self) -> str:
         return "ON" if self.thing.value else "OFF"
 
     async def handle(self, msg: str):
@@ -74,110 +59,120 @@ class SwitchHandler:
         else:
             raise ValueError(msg)
 
-    async def subscribe(self):
-        async with connect() as client:
-            await client.subscribe(self.state_topic)
-            await client.publish(self.state_topic, self.state())
-            async for msg in client.messages:
-                try:
-                    assert msg.payload
-                    assert isinstance(msg.payload, str)
-                    await self.handle(msg.payload)
-                except Exception:
-                    logger.exception(
-                        "Failed to handle message for %s", self.cmd_topic, msg=msg
-                    )
-                finally:
-                    await client.publish(self.state_topic, self.state())
+
+class AlarmTimeHandler:
+    def __init__(self, thing, cmd_topic: str, state_topic: str):
+        self.thing: Alarm = thing
+        self.cmd_topic = cmd_topic
+        self.state_topic = state_topic
+
+    async def state(self) -> str | None:
+        if target := self.thing.target:
+            return target.strftime("%H:%M")
+
+    async def handle(self, msg: str):
+        self.thing.target = datetime.strptime(msg, "%H:%M").time()
 
 
-lamp = FadeableHandler(
-    hal.lamp,
-    CONFIG["lamp"].payload["command_topic"],
-    CONFIG["lamp"].payload["brightness_state_topic"],
+class AlarmEnabledHandler:
+    def __init__(self, thing, cmd_topic: str, state_topic: str):
+        self.thing: Alarm = thing
+        self.cmd_topic = cmd_topic
+        self.state_topic = state_topic
+
+    async def state(self) -> str:
+        return "ON" if self.thing.enabled else "OFF"
+
+    async def handle(self, msg: str):
+        self.thing.enabled = True if msg == "ON" else False
+
+
+class AlarmTriggerHandler:
+    def __init__(self, thing, cmd_topic: str):
+        self.thing: Alarm = thing
+        self.cmd_topic = cmd_topic
+
+    async def state(self) -> None:
+        return None
+
+    async def handle(self, msg: str):
+        assert msg == "PRESS"
+        self.thing.trigger()
+
+
+class AlarmCancelHandler:
+    def __init__(self, thing, cmd_topic: str):
+        self.thing: Alarm = thing
+        self.cmd_topic = cmd_topic
+
+    async def state(self) -> None:
+        return None
+
+    async def handle(self, msg: str):
+        assert msg == "PRESS"
+        self.thing.cancel()
+
+
+HANDLERS = dict(
+    lamp=FadeableHandler(
+        hal.lamp,
+        CONFIG["lamp"].payload["command_topic"],
+        CONFIG["lamp"].payload["brightness_state_topic"],
+    ),
+    hw_volume=FadeableHandler(
+        hal.volume,
+        CONFIG["hw-volume"].payload["command_topic"],
+        CONFIG["hw-volume"].payload["state_topic"],
+    ),
+    sw_volume=FadeableHandler(
+        mopidy_volume,
+        CONFIG["sw-volume"].payload["command_topic"],
+        CONFIG["sw-volume"].payload["state_topic"],
+    ),
+    mute=SwitchHandler(
+        hal.mute,
+        CONFIG["mute"].payload["command_topic"],
+        CONFIG["mute"].payload["state_topic"],
+    ),
+    alarm_time=AlarmTimeHandler(
+        clock.alarm,
+        CONFIG["alarm-time"].payload["command_topic"],
+        CONFIG["alarm-time"].payload["state_topic"],
+    ),
+    alarm_enabled=AlarmEnabledHandler(
+        clock.alarm,
+        CONFIG["alarm-enabled"].payload["command_topic"],
+        CONFIG["alarm-enabled"].payload["state_topic"],
+    ),
+    alarm_trigger=AlarmTriggerHandler(
+        clock.alarm,
+        CONFIG["alarm-trigger"].payload["command_topic"],
+    ),
+    alarm_cancel=AlarmCancelHandler(
+        clock.alarm,
+        CONFIG["alarm-cancel"].payload["command_topic"],
+    ),
 )
-hw_volume = FadeableHandler(
-    hal.volume,
-    CONFIG["hw-volume"].payload["command_topic"],
-    CONFIG["hw-volume"].payload["state_topic"],
-)
-sw_volume = FadeableHandler(
-    mopidy_volume,
-    CONFIG["sw-volume"].payload["command_topic"],
-    CONFIG["sw-volume"].payload["state_topic"],
-)
-mute = SwitchHandler(
-    hal.mute,
-    CONFIG["mute"].payload["command_topic"],
-    CONFIG["mute"].payload["state_topic"],
-)
 
 
-async def handle_alarm():
-    cmd_topic = CONFIG["alarm-time"].payload["command_topic"]
-    state_topic = CONFIG["alarm-time"].payload["state_topic"]
-
+async def handler():
+    by_topic = {h.cmd_topic: h for h in HANDLERS.values()}
     async with connect() as client:
-        await client.subscribe(cmd_topic)
-        if target := clock.alarm.target:
-            await client.publish(state_topic, target.strftime("%H:%M"))
+        for handler in by_topic.values():
+            await client.subscribe(handler.cmd_topic)
+
         async for msg in client.messages:
+            handler = by_topic[str(msg.topic)]
             try:
-                assert msg.payload
-                assert isinstance(msg.payload, str)
-                time = datetime.strptime(msg.payload, "%H:%M").time()
-                clock.alarm.target = time
+                await handler.handle(msg.payload)
             except Exception:
-                logger.exception("Failed to handle message for %s", cmd_topic, msg=msg)
-            finally:
-                if target := clock.alarm.target:
-                    await client.publish(state_topic, target.strftime("%H:%M"))
-
-
-async def handle_alarm_enabled():
-    cmd_topic = CONFIG["alarm-enabled"].payload["command_topic"]
-    state_topic = CONFIG["alarm-enabled"].payload["state_topic"]
-
-    async with connect() as client:
-        await client.subscribe(cmd_topic)
-        await client.publish(state_topic, "ON" if clock.alarm.enabled else "OFF")
-        async for msg in client.messages:
-            try:
-                assert msg.payload
-                assert isinstance(msg.payload, str)
-                clock.alarm.enabled = True if msg.payload == "ON" else False
-            except Exception:
-                logger.exception("Failed to handle message for %s", cmd_topic, msg=msg)
-            finally:
-                await client.publish(
-                    state_topic, "ON" if clock.alarm.enabled else "OFF"
+                logger.exception(
+                    "Failed to handle message for %s", handler.cmd_topic, msg=msg
                 )
-
-
-async def handle_alarm_trigger():
-    cmd_topic = CONFIG["alarm-trigger"].payload["command_topic"]
-
-    async with connect() as client:
-        await client.subscribe(cmd_topic)
-        async for msg in client.messages:
-            try:
-                assert msg.payload == "PRESS"
-                clock.alarm.trigger()
-            except Exception:
-                logger.exception("Failed to handle message for %s", cmd_topic, msg=msg)
-
-
-async def handle_alarm_cancel():
-    cmd_topic = CONFIG["alarm-cancel"].payload["command_topic"]
-
-    async with connect() as client:
-        await client.subscribe(cmd_topic)
-        async for msg in client.messages:
-            try:
-                assert msg.payload == "PRESS"
-                clock.alarm.cancel()
-            except Exception:
-                logger.exception("Failed to handle message for %s", cmd_topic, msg=msg)
+            finally:
+                if (state := await handler.state()) is not None:
+                    logger.info("Publishing updated state %s", handler.state_topic)
+                    await client.publish(handler.state_topic, state)
 
 
 async def setup_mqtt():
@@ -187,13 +182,4 @@ async def setup_mqtt():
 
     await publish.publish()
     logger.info("Setting up mqtt handlers")
-
-    asyncio.create_task(lamp.subscribe())
-    asyncio.create_task(hw_volume.subscribe())
-    asyncio.create_task(sw_volume.subscribe())
-    asyncio.create_task(mute.subscribe())
-
-    asyncio.create_task(handle_alarm())
-    asyncio.create_task(handle_alarm_enabled())
-    asyncio.create_task(handle_alarm_trigger())
-    asyncio.create_task(handle_alarm_cancel())
+    asyncio.create_task(handler())
