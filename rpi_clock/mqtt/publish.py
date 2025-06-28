@@ -108,6 +108,15 @@ CONFIG = {
             "icon": "mdi:bell-off-outline",
         },
     ),
+    "alarm-in-progress": Config(
+        f"{PREFIX}/binary_sensor/{ID}_alarm_in_progress/config",
+        {
+            "name": "Sunrise Clock Alarm In Progress",
+            "unique_id": "sunrise_clock_alarm_in_progress",
+            "in_progress_topic": "sunrise_clock/alarm/in_progress/set",
+            "icon": "mdi:bell-alert-outline",
+        },
+    ),
 }
 
 
