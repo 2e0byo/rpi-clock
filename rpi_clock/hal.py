@@ -21,5 +21,3 @@ down_button = ZeroButton(
 enter_button = ZeroButton(
     pinmap.ENTER_BUTTON_PIN, suppress=True, name="EnterButton", blocking=True
 )
-
-# TODO move this out: this is the main entrypoint

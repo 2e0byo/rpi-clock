@@ -41,6 +41,7 @@ class Lcd:
     def restart(self):
         """Restart lcd."""
         self._write(self.RESTART)
+        self._buffer = [""] * self.rows
         self.cursor(False)
         self.blink(False)
 
